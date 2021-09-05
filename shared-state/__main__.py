@@ -1,8 +1,10 @@
 """Provision resources for S3 state"""
 
+from cryptography.fernet import Fernet
 import json
+import os
 import pulumi
-from pulumi_aws import s3, iam
+from pulumi_aws import s3, iam, kms
 
 config      = pulumi.Config()
 bucket_name = config.require('bucket_name')
@@ -67,8 +69,21 @@ policy_attach = iam.PolicyAttachment("policy-attach",
     roles=[role.name],
     policy_arn=policy.arn)
 
+# Create a KMS key that will be used to encrypt secrets in the S3 bucket
+kms_key = kms.Key("pulumi-state-encrypt-key",
+    deletion_window_in_days=10,
+    description="Pulumi State Encrypt Key")
+
+# Create a Fernet encrypted key
+if not os.path.exists("encrypted_secret.key"):
+    fernet_key = Fernet.generate_key()
+    with open("encrypted_secret.key", "wb") as key_file:
+        key_file.write(fernet_key)
+
 # Exports
 pulumi.export('bucket_name', bucket.id)
 pulumi.export('role_name', role.name)
 pulumi.export('role_arn', role.arn)
 pulumi.export('policy_arn', policy.arn)
+pulumi.export('kms_Key_arn', kms_key.arn)
+pulumi.export('kms_Key_id', kms_key.id)

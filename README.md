@@ -90,4 +90,6 @@ aws-vault exec {{some-profile}} -- pulumi up
 
 Create an IAM policy and attach to an IAM user in another account to give the user access to manage state for that account. The IAM policy can be imported to a stack once the user has access to the state bucket.
 
+Keep `encrypted_secret.key` handy for future work.
+
 Check out https://github.com/kjenney/pulumi-bootstrap-rds to continue this journey.
