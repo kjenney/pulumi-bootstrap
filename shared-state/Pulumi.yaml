@@ -1,0 +1,6 @@
+name: shared-state
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Provision resources for S3 state
