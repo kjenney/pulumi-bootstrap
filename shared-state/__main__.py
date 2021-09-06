@@ -74,6 +74,11 @@ kms_key = kms.Key("pulumi-state-encrypt-key",
     deletion_window_in_days=10,
     description="Pulumi State Encrypt Key")
 
+kms_key_alias = kms.Alias("pulumi-secret-encryption",
+    name="alias/pulumi-secret-encryption",
+    target_key_id=kms_key.key_id,
+)
+
 # Create a Fernet encrypted key
 if not os.path.exists("encrypted_secret.key"):
     fernet_key = Fernet.generate_key()
@@ -85,5 +90,6 @@ pulumi.export('bucket_name', bucket.id)
 pulumi.export('role_name', role.name)
 pulumi.export('role_arn', role.arn)
 pulumi.export('policy_arn', policy.arn)
-pulumi.export('kms_Key_arn', kms_key.arn)
-pulumi.export('kms_Key_id', kms_key.id)
+pulumi.export('kms_key_arn', kms_key.arn)
+pulumi.export('kms_key_id', kms_key.key_id)
+pulumi.export('kms_key_alias', kms_key_alias.name)
