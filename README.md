@@ -19,7 +19,6 @@ Because we always expect our Infrastructure and Secrets will get out of control.
 * [AWS](https://aws.amazon.com/)
 * [Python](https://www.python.org/)
 * [KMS](https://aws.amazon.com/kms/)
-* [Fernet](https://cryptography.io/en/latest/fernet/)
 * [AWS CLI](https://aws.amazon.com/cli/)
 * [aws-vault (*Optional*)](https://github.com/99designs/aws-vault)
 
@@ -51,9 +50,9 @@ If you want to allow one or more IAM users to assume the bucket role you need to
 
 `iam_name` will be the name of the IAM role and IAM policy granting access to the bucket.
 
-## First stack
+## Create S3 Shared State with IAM permissions
 
-We'll start out by deploying resources in a single AWS account. If you want to allow users in other AWS accounts to access the bucket check out the [Next Steps](#next-steps)
+We'll start out by deploying required resources in a single AWS account. If you want to allow users in other AWS accounts to access the bucket check out the [Next Steps](#next-steps)
 
 1. ```shell
    cd shared-state
@@ -86,10 +85,14 @@ or
 aws-vault exec {{some-profile}} -- pulumi up
 ```
 
+## Deploying CodePipeline
+
+We'll deploy a CodePipeline which will in turn deploy all of the infrastructure we need in our environment - including updating the existing CodePipeline when changes are commited.
+
+
 ## Next Steps
 
 Create an IAM policy and attach to an IAM user in another account to give the user access to manage state for that account. The IAM policy can be imported to a stack once the user has access to the state bucket.
 
 Keep `encrypted_secret.key` handy for future work.
 
-Check out https://github.com/kjenney/pulumi-bootstrap-rds to continue this journey.
