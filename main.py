@@ -17,109 +17,9 @@ from pprint import pprint
 #    * pulumi cli is installed
 #    * stack-name corresponds to an environment (i.e. prod, staging, dev)
 
-def create_pipeline():
-    # Load config
-    config = pulumi.Config()
-    environment = config.require('environment')
-    # Get GitHub Connection
-    github_connection = aws.codestarconnections.Connection("pipeline", provider_type="GitHub")
-    # Create an S3 bucket for the artifacts - which we won't use 
-    codepipeline_bucket = aws.s3.Bucket("codepipelineBucket", acl="private")
-    # Create the IAM Assume Role
-    codepipeline_role = aws.iam.Role("codepipelineRole", assume_role_policy="""{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-        "Effect": "Allow",
-        "Principal": {
-            "Service": "codepipeline.amazonaws.com"
-        },
-        "Action": "sts:AssumeRole"
-        }
-    ]
-    }
-    """)
-    # Create the CodePipeline
-    codepipeline = aws.codepipeline.Pipeline("codepipeline",
-        artifact_store=aws.codepipeline.PipelineArtifactStoreArgs(
-            location=codepipeline_bucket.bucket,
-            type="S3",
-        ),
-        role_arn=codepipeline_role.arn,
-        stages=[
-            aws.codepipeline.PipelineStageArgs(
-                name="Source",
-                actions=[aws.codepipeline.PipelineStageActionArgs(
-                    name="Source",
-                    category="Source",
-                    owner="AWS",
-                    provider="CodeStarSourceConnection",
-                    version="1",
-                    output_artifacts=["source_output"],
-                    configuration={
-                        "ConnectionArn": github_connection.arn,
-                        "FullRepositoryId": "kjenney/pulumi-bootstrap",
-                        #"Owner": "kjenney",
-                        #"Repo": "pulumi-bootstrap",
-                        "BranchName": "main",
-                    },
-                )],
-            ),
-            aws.codepipeline.PipelineStageArgs(
-                name="Build",
-                actions=[aws.codepipeline.PipelineStageActionArgs(
-                    name="Build",
-                    category="Build",
-                    owner="AWS",
-                    provider="CodeBuild",
-                    input_artifacts=["source_output"],
-                    output_artifacts=["build_output"],
-                    version="1",
-                    configuration={
-                        "ProjectName": "codeBuildProject",
-                    },
-                )],
-            )
-        ])
-    codepipeline_policy = aws.iam.RolePolicy("codepipelinePolicy",
-        role=codepipeline_role.id,
-        policy=pulumi.Output.all(codepipeline_bucket.arn, github_connection.arn).apply(lambda args: f"""{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                "Effect":"Allow",
-                "Action": [
-                    "s3:GetObject",
-                    "s3:GetObjectVersion",
-                    "s3:GetBucketVersioning",
-                    "s3:PutObjectAcl",
-                    "s3:PutObject"
-                ],
-                "Resource": [
-                    "{args[0]}",
-                    "{args[0]}/*"
-                ]
-                }},
-                {{
-                "Effect": "Allow",
-                "Action": [
-                    "codestar-connections:UseConnection"
-                ],
-                "Resource": "{args[1]}"
-                }},
-                {{
-                "Effect": "Allow",
-                "Action": [
-                    "codebuild:BatchGetBuilds",
-                    "codebuild:StartBuild"
-                ],
-                "Resource": "*"
-                }}
-            ]
-            }}
-            """))
-    codebuild_bucket = aws.s3.Bucket("codeBuildBucket", acl="private")
-    codebuild_role = aws.iam.Role("codeBuildRole", assume_role_policy="""{
+def create_codebuild_project(environment, pipeline_bucket, project_name):
+    codebuild_bucket = aws.s3.Bucket(f"codeBuildBucket-{project_name}-{environment}", acl="private")
+    codebuild_role = aws.iam.Role(f"codeBuildRole-{project_name}-{environment}", assume_role_policy="""{
         "Version": "2012-10-17",
         "Statement": [
           {
@@ -132,9 +32,9 @@ def create_pipeline():
         ]
     }
     """)
-    codebuild_role_policy = aws.iam.RolePolicy("codeBuildRolePolicy",
+    codebuild_role_policy = aws.iam.RolePolicy(f"codeBuildRolePolicy-{project_name}-{environment}",
         role=codebuild_role.name,
-        policy=pulumi.Output.all(codebuild_bucket.arn, codepipeline_bucket.arn).apply(lambda buckets: f"""{{
+        policy=pulumi.Output.all(codebuild_bucket.arn, pipeline_bucket.arn).apply(lambda buckets: f"""{{
             "Version": "2012-10-17",
             "Statement": [
               {{
@@ -173,9 +73,9 @@ def create_pipeline():
             ]
         }}
     """))
-    codebuild_project = aws.codebuild.Project("codeBuildProject",
-        name="codeBuildProject",
-        description="codebuild project",
+    codebuild_project = aws.codebuild.Project(f"{project_name}-{environment}",
+        name=f"{project_name}-{environment}",
+        description=f"codebuild project for {project_name} in {environment}",
         build_timeout=5,
         service_role=codebuild_role.arn,
         artifacts=aws.codebuild.ProjectArtifactsArgs(
@@ -203,14 +103,128 @@ def create_pipeline():
         ),
         source=aws.codebuild.ProjectSourceArgs(
             type="CODEPIPELINE",
+            buildspec=f"infra/{project_name}/buildspec.yml"
         ),
         tags={
-            "Name": 'codeBuildProject',
+            "Name": project_name,
             "Environment": environment,
             "Managed By": "Pulumi",
         })
+
+def create_pipeline(infra_projects, environment):
+    # Get GitHub Connection
+    github_connection = aws.codestarconnections.Connection("pipeline", provider_type="GitHub")
+    # Create an S3 bucket for the artifacts - which we won't use 
+    codepipeline_bucket = aws.s3.Bucket("codepipelineBucket", acl="private")
+    # Create the IAM Assume Role
+    codepipeline_role = aws.iam.Role("codepipelineRole", assume_role_policy="""{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+        "Effect": "Allow",
+        "Principal": {
+            "Service": "codepipeline.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+        }
+    ]
+    }
+    """)
+    codepipeline_stages = [
+        aws.codepipeline.PipelineStageArgs(
+            name="Source",
+            actions=[aws.codepipeline.PipelineStageActionArgs(
+                name="Source",
+                category="Source",
+                owner="AWS",
+                provider="CodeStarSourceConnection",
+                version="1",
+                output_artifacts=["source_output"],
+                configuration={
+                    "ConnectionArn": github_connection.arn,
+                    "FullRepositoryId": "kjenney/pulumi-bootstrap",
+                    "BranchName": "main",
+                },
+            )],
+        )
+    ]
+    # Create the Build stages
+    for p in infra_projects:
+        codepipeline_stages.append(
+            aws.codepipeline.PipelineStageArgs(
+                name=f"Build-{p}",
+                actions=[aws.codepipeline.PipelineStageActionArgs(
+                    name=f"Build-{p}",
+                    category="Build",
+                    owner="AWS",
+                    provider="CodeBuild",
+                    input_artifacts=["source_output"],
+                    output_artifacts=[f"build_output-{p}"],
+                    version="1",
+                    configuration={
+                        "ProjectName": f"{p}-{environment}",
+                    },
+                )],
+            )
+        )
+
+    # Create the CodePipeline
+    codepipeline = aws.codepipeline.Pipeline("codepipeline",
+        name=f"pipeline-{environment}",
+        artifact_store=aws.codepipeline.PipelineArtifactStoreArgs(
+            location=codepipeline_bucket.bucket,
+            type="S3",
+        ),
+        role_arn=codepipeline_role.arn,
+        tags={
+            "Name": 'pipeline',
+            "Environment": environment,
+            "Managed By": "Pulumi",
+        },
+        stages=codepipeline_stages
+    )
+    codepipeline_policy = aws.iam.RolePolicy("codepipelinePolicy",
+        role=codepipeline_role.id,
+        policy=pulumi.Output.all(codepipeline_bucket.arn, github_connection.arn).apply(lambda args: f"""{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                "Effect":"Allow",
+                "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectVersion",
+                    "s3:GetBucketVersioning",
+                    "s3:PutObjectAcl",
+                    "s3:PutObject"
+                ],
+                "Resource": [
+                    "{args[0]}",
+                    "{args[0]}/*"
+                ]
+                }},
+                {{
+                "Effect": "Allow",
+                "Action": [
+                    "codestar-connections:UseConnection"
+                ],
+                "Resource": "{args[1]}"
+                }},
+                {{
+                "Effect": "Allow",
+                "Action": [
+                    "codebuild:BatchGetBuilds",
+                    "codebuild:StartBuild"
+                ],
+                "Resource": "*"
+                }}
+            ]
+            }}
+            """))
     pulumi.export(f"codepipeline_arn", codepipeline.arn)
     pulumi.export(f"codepipeline_id", codepipeline.id)
+    for p in infra_projects:
+        create_codebuild_project(environment, codepipeline_bucket, p)
+
 
 def create_webhook():
     webhook_secret = "super-secret"
@@ -237,15 +251,12 @@ def create_webhook():
         repository=github_repository["repo"]["name"])
 
 def pulumi_program():
-    create_codebuild()
-    create_pipeline()
-    #create_webhook()
-
-def create_codebuild():
-    # Load config
     config = pulumi.Config()
+    infra_projects = config.require('infra_projects')
+    infra_projects = json.loads(infra_projects)
     environment = config.require('environment')
- 
+    create_pipeline(infra_projects, environment)
+    #create_webhook()
 
 def args():
     parser = argparse.ArgumentParser(description='Manage a Pulumi automation stack.')
@@ -258,7 +269,7 @@ def args():
                         action='store_true')
     return parser.parse_args()
 
-def manage(args, project_name, pulumi_program):
+def manage(args, project_name, infra_projects, pulumi_program):
     backend_bucket = args.backend_bucket
     aws_region = args.aws_region
     kms_alias_name = args.kms_alias_name
@@ -297,6 +308,8 @@ def manage(args, project_name, pulumi_program):
     print("setting up config")
     stack.set_config("aws_region", auto.ConfigValue(value=aws_region))
     stack.set_config("environment", auto.ConfigValue(value=environment))
+    #for p in infra_projects:
+    stack.set_config('infra_projects', auto.ConfigValue(value=infra_projects))
     print("config set")
 
     print("refreshing stack...")
@@ -323,15 +336,7 @@ def get_config(environment):
                 print(exc)
 
 
-# Deploy infrastructure in /infra folder using configuration in /environments folder
+# Deploy CodePipeline with CodeBuild projects for each piece of infra
+stack = manage(args(), 'pipeline', json.dumps(['vpc','secrets']), pulumi_program)
 
-# for infra in os.listdir('infra'):
-#     sys.path.insert(1, f"infra/{infra}")
-#     from infra import pulumi_program
-#     stack = manage(args(), infra, pulumi_program)
-#     break
-
-
-# Deploy CodePipeline which will in turn deploy the rest of the infrastructure
-stack = manage(args(), 'pipeline', pulumi_program)
 
