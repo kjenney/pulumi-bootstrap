@@ -1,0 +1,39 @@
+---
+vpc:
+  cidr: 10.2.0.0/16
+  subnet1:
+    cidr: 10.2.0.0/22
+    type: public
+  subnet2:
+    cidr: 10.2.4.0/22
+    type: public
+  subnet3:
+    cidr: 10.2.8.0/22
+    type: private
+  subnet4:
+    cidr: 10.2.12.0/22
+    type: private
+  subnet5:
+    cidr: 10.2.16.0/22
+    type: private
+  subnet6:
+    cidr: 10.2.20.0/22
+    type: private
+k8s_clusters:
+  east1:
+    this: that
+  west1:
+    this: that
+  east2:
+    this: that
+applications:
+  auth:
+    clusters:
+      - east1
+      - east2
+  app1:
+    cluster:
+      - west1
+      - east2
+databases:
+  db_name: test
