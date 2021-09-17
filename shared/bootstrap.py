@@ -16,7 +16,7 @@ from pprint import pprint
 #    * pulumi cli is installed
 #    * stack-name corresponds to an environment (i.e. prod, staging, dev)
 
-def create_codebuild_project(environment, pipeline_bucket, project_name):
+def create_codebuild_project(environment, pipeline_bucket, project_name, github_connection):
     codebuild_bucket = aws.s3.Bucket(f"codeBuildBucket-{project_name}-{environment}", acl="private")
     codebuild_role = aws.iam.Role(f"codeBuildRole-{project_name}-{environment}", assume_role_policy="""{
         "Version": "2012-10-17",
@@ -33,7 +33,7 @@ def create_codebuild_project(environment, pipeline_bucket, project_name):
     """)
     codebuild_role_policy = aws.iam.RolePolicy(f"codeBuildRolePolicy-{project_name}-{environment}",
         role=codebuild_role.name,
-        policy=pulumi.Output.all(codebuild_bucket.arn, pipeline_bucket.arn).apply(lambda buckets: f"""{{
+        policy=pulumi.Output.all(codebuild_bucket.arn, pipeline_bucket.arn, github_connection.arn).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
               {{
@@ -63,13 +63,20 @@ def create_codebuild_project(environment, pipeline_bucket, project_name):
                  "Effect": "Allow",
                  "Action": ["s3:*"],
                  "Resource": [
-                   "{buckets[0]}",
-                   "{buckets[0]}/*",
-                   "{buckets[1]}",
-                   "{buckets[1]}/*",
+                   "{args[0]}",
+                   "{args[0]}/*",
+                   "{args[1]}",
+                   "{args[1]}/*",
                    "arn:aws:s3:::my-pulumi-state",
                    "arn:aws:s3:::my-pulumi-state/*"                  
                  ]
+              }},
+              {{
+                 "Effect": "Allow",
+                 "Action": [
+                   "codestar-connections:UseConnection"
+                 ],
+                 "Resource": "{args[2]}"
               }},
               {{
                  "Effect": "Allow",
@@ -77,6 +84,14 @@ def create_codebuild_project(environment, pipeline_bucket, project_name):
                  "Resource": [
                    "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"                
                  ]
+              }},
+              {{
+                  "Effect": "Allow",
+                  "Action": [
+                      "iam:GetRole",
+                      "iam:GetRolePolicy"
+                  ],
+                  "Resource": "*"
               }}
             ]
         }}
@@ -223,6 +238,7 @@ def create_pipeline(infra_projects, environment):
                 "Effect": "Allow",
                 "Action": [
                     "codebuild:BatchGetBuilds",
+                    "codebuild:BatchGetProjects",
                     "codebuild:StartBuild"
                 ],
                 "Resource": "*"
@@ -240,7 +256,7 @@ def create_pipeline(infra_projects, environment):
     pulumi.export(f"codepipeline_arn", codepipeline.arn)
     pulumi.export(f"codepipeline_id", codepipeline.id)
     for p in infra_projects:
-        create_codebuild_project(environment, codepipeline_bucket, p)
+        create_codebuild_project(environment, codepipeline_bucket, p, github_connection)
 
 def create_webhook():
     webhook_secret = "super-secret"
