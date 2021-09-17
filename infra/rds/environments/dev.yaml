@@ -1,0 +1,3 @@
+---
+rds:
+  db_name: 'dev'
