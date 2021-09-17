@@ -20,6 +20,6 @@ def pulumi_program():
     create_pipeline(infra_projects, environment)
     #create_webhook()
 
-stack = manage(args(), 'pipeline', pulumi_program, json.dumps(['vpc','secrets']))
+stack = manage(args(), 'pipeline', pulumi_program, json.dumps(['secrets','vpc']))
 
 
