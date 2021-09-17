@@ -30,8 +30,8 @@ def pulumi_program():
     f = open('secrets.json')
     secrets_dict = json.load(f)
     for k,v in secrets_dict.items():
-        #pulumi.export(k, pulumi.secret(v))
-        pulumi.export(k,v)
+        pulumi.export(k, pulumi.Output.secret(v))
+        #pulumi.export(k,v)
 
 stack = manage(args(), 'secrets', pulumi_program)
 os.remove(decrypted_file)
