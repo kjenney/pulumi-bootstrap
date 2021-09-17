@@ -1,0 +1,21 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.x
+    commands:
+      - curl -fsSL https://get.pulumi.com | sh
+      - PATH=$PATH:/root/.pulumi/bin
+  pre_build:
+    commands:
+      - pip install -r requirements.txt
+  build:
+    commands:
+      - python main.py -b my-pulumi-state -k pulumi-secret-encryption -s dev
+artifacts: 
+  files:
+    - '**/*'
+  base-directory: .
+  name: pulumi-bootstrap
+  discard-paths: no
