@@ -74,6 +74,7 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
               {{
                  "Effect": "Allow",
                  "Action": [
+                   "codestar-connections:GetConnection",
                    "codestar-connections:UseConnection"
                  ],
                  "Resource": "{args[2]}"
@@ -88,6 +89,7 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
               {{
                   "Effect": "Allow",
                   "Action": [
+                      "iam:ListRolePolicies",
                       "iam:GetRole",
                       "iam:GetRolePolicy"
                   ],
@@ -99,6 +101,20 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
                       "ec2:*"
                   ],
                   "Resource": "*"                
+              }},
+              {{
+                  "Effect": "Allow",
+                  "Action": [
+                      "codebuild:BatchGetProjects"
+                  ],
+                  "Resource": "*"
+              }},
+              {{
+                  "Effect": "Allow",
+                  "Action": [
+                      "codepipeline:GetPipeline"
+                  ],
+                  "Resource": "*"
               }}
             ]
         }}
