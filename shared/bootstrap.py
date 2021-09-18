@@ -92,6 +92,13 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
                       "iam:GetRolePolicy"
                   ],
                   "Resource": "*"
+              }},
+              {{
+                  "Effect": "Allow",
+                  "Action": [
+                      "ec2:*"
+                  ],
+                  "Resource": "*"                
               }}
             ]
         }}

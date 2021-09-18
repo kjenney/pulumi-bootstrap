@@ -7,7 +7,7 @@ import sys
 import yaml
 import os
 
-sys.path.append("./shared")
+sys.path.append("../../shared")
 from bootstrap import *
 
 # Deploy CodePipeline with CodeBuild projects for each piece of infra
@@ -20,6 +20,6 @@ def pulumi_program():
     create_pipeline(infra_projects, environment)
     #create_webhook()
 
-stack = manage(args(), 'pipeline', pulumi_program, json.dumps(['secrets','vpc']))
+stack = manage(args(), 'pipeline', pulumi_program, json.dumps(['secrets','vpc','pipeline']))
 
 
