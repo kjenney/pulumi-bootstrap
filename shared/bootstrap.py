@@ -33,7 +33,7 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
     """)
     codebuild_role_policy = aws.iam.RolePolicy(f"codeBuildRolePolicy-{project_name}-{environment}",
         role=codebuild_role.name,
-        policy=pulumi.Output.all(codebuild_bucket.arn, pipeline_bucket.arn, github_connection.arn).apply(lambda args: f"""{{
+        policy=pulumi.Output.all(codebuild_bucket=codebuild_bucket.arn, pipeline_bucket=pipeline_bucket.arn, github_connection=github_connection.arn).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
               {{
@@ -63,16 +63,16 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
                  "Effect": "Allow",
                  "Action": ["s3:*"],
                  "Resource": [
-                   "{args[0]}",
-                   "{args[0]}/*",
-                   "{args[1]}",
-                   "{args[1]}/*",
+                   "{args['codebuild_bucket']}",
+                   "{args['codebuild_bucket']}/*",
+                   "{args['pipeline_bucket']}",
+                   "{args['pipeline_bucket']}/*",
                    "arn:aws:s3:::my-pulumi-state",
                    "arn:aws:s3:::my-pulumi-state/*",
-                   "arn:aws:s3:::codeBuildBucket-vpc-dev*",
-                   "arn:aws:s3:::codeBuildBucket-vpc-dev*/*",
-                   "arn:aws:s3:::codeBuildBucket-secrets-dev*",
-                   "arn:aws:s3:::codeBuildBucket-secrets-dev*/*"
+                   "arn:aws:s3:::codebuildbucket-vpc-dev*",
+                   "arn:aws:s3:::codebuildbucket-vpc-dev*/*",
+                   "arn:aws:s3:::codebuildbucket-secrets-dev*",
+                   "arn:aws:s3:::codebuildbucket-secrets-dev*/*"
                  ]
               }},
               {{
@@ -82,7 +82,7 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
                    "codestar-connections:UseConnection",
                    "codestar-connections:ListTagsForResource"
                  ],
-                 "Resource": "{args[2]}"
+                 "Resource": "{args['github_connection']}"
               }},
               {{
                  "Effect": "Allow",
@@ -118,7 +118,8 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
               {{
                   "Effect": "Allow",
                   "Action": [
-                      "codepipeline:GetPipeline"
+                      "codepipeline:GetPipeline",
+                      "codepipeline:ListTagsForResource"
                   ],
                   "Resource": "*"
               }}
@@ -237,7 +238,7 @@ def create_pipeline(infra_projects, environment):
     )
     codepipeline_policy = aws.iam.RolePolicy("codepipelinePolicy",
         role=codepipeline_role.id,
-        policy=pulumi.Output.all(codepipeline_bucket.arn, github_connection.arn).apply(lambda args: f"""{{
+        policy=pulumi.Output.all(codepipeline_bucket=codepipeline_bucket.arn, github_connection=github_connection.arn).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
                 {{
@@ -250,8 +251,8 @@ def create_pipeline(infra_projects, environment):
                     "s3:PutObject"
                 ],
                 "Resource": [
-                    "{args[0]}",
-                    "{args[0]}/*",
+                    "{args['codepipeline_bucket']}",
+                    "{args['codepipeline_bucket']}/*",
                     "arn:aws:s3:::my-pulumi-state",
                     "arn:aws:s3:::my-pulumi-state/*"
                 ]
@@ -261,7 +262,7 @@ def create_pipeline(infra_projects, environment):
                 "Action": [
                     "codestar-connections:UseConnection"
                 ],
-                "Resource": "{args[1]}"
+                "Resource": "{args['github_connection']}"
                 }},
                 {{
                 "Effect": "Allow",
