@@ -68,14 +68,19 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
                    "{args[1]}",
                    "{args[1]}/*",
                    "arn:aws:s3:::my-pulumi-state",
-                   "arn:aws:s3:::my-pulumi-state/*"                  
+                   "arn:aws:s3:::my-pulumi-state/*",
+                   "arn:aws:s3:::codeBuildBucket-vpc-dev",
+                   "arn:aws:s3:::codeBuildBucket-vpc-dev/*",
+                   "arn:aws:s3:::codeBuildBucket-secrets-dev",
+                   "arn:aws:s3:::codeBuildBucket-secrets-dev/*"
                  ]
               }},
               {{
                  "Effect": "Allow",
                  "Action": [
                    "codestar-connections:GetConnection",
-                   "codestar-connections:UseConnection"
+                   "codestar-connections:UseConnection",
+                   "codestar-connections:ListTagsForResource"
                  ],
                  "Resource": "{args[2]}"
               }},
@@ -91,7 +96,8 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
                   "Action": [
                       "iam:ListRolePolicies",
                       "iam:GetRole",
-                      "iam:GetRolePolicy"
+                      "iam:GetRolePolicy",
+                      "iam:ListAttachedRolePolicies"
                   ],
                   "Resource": "*"
               }},
