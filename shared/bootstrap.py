@@ -69,10 +69,10 @@ def create_codebuild_project(environment, pipeline_bucket, project_name, github_
                    "{args[1]}/*",
                    "arn:aws:s3:::my-pulumi-state",
                    "arn:aws:s3:::my-pulumi-state/*",
-                   "arn:aws:s3:::codeBuildBucket-vpc-dev",
-                   "arn:aws:s3:::codeBuildBucket-vpc-dev/*",
-                   "arn:aws:s3:::codeBuildBucket-secrets-dev",
-                   "arn:aws:s3:::codeBuildBucket-secrets-dev/*"
+                   "arn:aws:s3:::codeBuildBucket-vpc-dev*",
+                   "arn:aws:s3:::codeBuildBucket-vpc-dev*/*",
+                   "arn:aws:s3:::codeBuildBucket-secrets-dev*",
+                   "arn:aws:s3:::codeBuildBucket-secrets-dev*/*"
                  ]
               }},
               {{
