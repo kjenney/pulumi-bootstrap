@@ -14,12 +14,23 @@ from bootstrap import *
 
 def pulumi_program():
     config = pulumi.Config()
-    infra_projects = config.require('infra_projects')
-    infra_projects = json.loads(infra_projects)
     environment = config.require('environment')
-    create_pipeline(infra_projects, environment)
+    data = get_config(environment)
+    infra_projects = data['infra']
+    # Get S3 buckets
+    s3_reference = pulumi.StackReference(f"s3-{environment}")
+    buckets = {}
+    for project in infra_projects:
+        buckets[f"codebuild_{project}_bucket_id"] = s3_reference.get_output(f"codebuild_{project}_bucket_id")
+    buckets["codepipeline_bucket_id"] = s3_reference.get_output("codepipeline_bucket_id")
+    # Get IAM Roles
+    iam_reference = pulumi.StackReference(f"iam-{environment}")
+    roles = {}
+    roles['codepipeline_role_arn'] = iam_reference.get_output("codepipeline_role_arn")
+    roles['codebuild_role_arn'] = iam_reference.get_output("codebuild_role_arn")
+    roles['codepipeline_role_id'] = iam_reference.get_output("codepipeline_role_id")
+    roles['codebuild_role_id'] = iam_reference.get_output("codebuild_role_id")
+    create_pipeline(infra_projects, buckets, roles, environment)
     #create_webhook()
 
-stack = manage(args(), 'pipeline', pulumi_program, json.dumps(['secrets','vpc','pipeline']))
-
-
+stack = manage(args(), 'pipeline', pulumi_program)

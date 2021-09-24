@@ -1,24 +1,37 @@
 ---
+infra:
+  - secrets
+  - vpc
+  - s3
+  - iam
+  - pipeline
 vpc:
   cidr: 10.2.0.0/16
-  subnet1:
-    cidr: 10.2.0.0/22
-    type: public
-  subnet2:
-    cidr: 10.2.4.0/22
-    type: public
-  subnet3:
-    cidr: 10.2.8.0/22
-    type: private
-  subnet4:
-    cidr: 10.2.12.0/22
-    type: private
-  subnet5:
-    cidr: 10.2.16.0/22
-    type: private
-  subnet6:
-    cidr: 10.2.20.0/22
-    type: private
+  subnets:
+    subnet1:
+      cidr: 10.2.0.0/22
+      type: public
+      az: a
+    subnet2:
+      cidr: 10.2.4.0/22
+      type: public
+      az: b
+    subnet3:
+      cidr: 10.2.8.0/22
+      type: private
+      az: a
+    subnet4:
+      cidr: 10.2.12.0/22
+      type: private
+      az: b
+    subnet5:
+      cidr: 10.2.16.0/22
+      type: private
+      az: c
+    subnet6:
+      cidr: 10.2.20.0/22
+      type: private
+      az: a
 k8s_clusters:
   east1:
     this: that
@@ -37,3 +50,4 @@ applications:
       - east2
 databases:
   db_name: test
+

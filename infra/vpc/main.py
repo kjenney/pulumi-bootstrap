@@ -11,7 +11,10 @@ def pulumi_program():
     aws_region = config.require('aws_region')
     data = get_config(environment)
     vpc_cidr = data['vpc']['cidr']
-    vpc_name = f"main-{environment}"
+    if '/16' in vpc_cidr:
+        vpc_name = f"main-{environment}"
+    else:
+        raise ValueError('The VPC must use /16 CIDR.')
     tags = {
         "Name": vpc_name,
         "Environment": environment,

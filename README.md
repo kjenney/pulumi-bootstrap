@@ -90,9 +90,7 @@ aws-vault exec {{some-profile}} -- pulumi up
 We'll deploy a CodePipeline which will in turn deploy all of the infrastructure we need in our environment - including updating the existing CodePipeline when changes are commited.
 
 
-## Next Steps
+## Deploying VPC
 
-Create an IAM policy and attach to an IAM user in another account to give the user access to manage state for that account. The IAM policy can be imported to a stack once the user has access to the state bucket.
-
-Keep `encrypted_secret.key` handy for future work.
+* Requires a `/16` CIDR
 
