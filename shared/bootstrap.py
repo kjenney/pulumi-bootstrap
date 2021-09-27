@@ -18,124 +18,26 @@ from pprint import pprint
 
 def create_codebuild_pipeline_project(environment, buckets, roles, project_name, github_connection):
     """Create a CodeBuild Pipeline Project whose source is that takes the source code after a merge to main"""
+    codebuild_role_arn = roles[f"codebuild_role_{project_name}_arn"]
+    codebuild_role_id = roles[f"codebuild_role_{project_name}_id"]
     # Use the existing S3 bucket
     codebuild_bucket = buckets[f"codebuild_{project_name}_bucket_id"]
     codepipeline_bucket = buckets["codepipeline_bucket_id"]
-    codebuild_role = aws.iam.Role(f"codeBuildRole-{project_name}-{environment}", assume_role_policy="""{
-        "Version": "2012-10-17",
-        "Statement": [
-          {
-            "Effect": "Allow",
-            "Principal": {
-              "Service": "codebuild.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
-          }
-        ]
-    }
-    """)
-    # Grant access to every bucket
-    for key in buckets:
-        codebuild_bucket_policy = aws.iam.RolePolicy(f"codeBuildBucketRolePolicy-{project_name}-{environment}",
-            role=codebuild_role.name,
-            policy=pulumi.Output.all(bucket=buckets[key]).apply(lambda args: f"""{{
-                "Version": "2012-10-17",
-                "Statement": [
-                {{
-                    "Effect": "Allow",
-                    "Action": ["s3:*"],
-                    "Resource": [
-                        "arn:aws:s3:::{args['bucket']}",
-                        "arn:aws:s3:::{args['bucket']}/*"
-                    ]
-                }}
-                ]
-            }}
-            """))
-    codebuild_role_policy = aws.iam.RolePolicy(f"codeBuildRolePolicy-{project_name}-{environment}",
-        role=codebuild_role.name,
-        policy=pulumi.Output.all(codebuild_bucket=codebuild_bucket, pipeline_bucket=codepipeline_bucket, all_bukcets=buckets, github_connection=github_connection.arn).apply(lambda args: f"""{{
+    # Create IAM policy to create github connections for CodeBuild Projects
+    codebuild_policy = aws.iam.RolePolicy(f"codebuldPolicy_{project_name}_{environment}",
+        role=codebuild_role_id,
+        policy=pulumi.Output.all(github_connection=github_connection.arn).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
-              {{
+                {{
                 "Effect": "Allow",
-                "Resource": ["*"],
                 "Action": [
-                  "logs:CreateLogGroup",
-                  "logs:CreateLogStream",
-                  "logs:PutLogEvents"
-                ]
-              }},
-              {{
-                "Effect": "Allow",
-                "Resource": "*",
-                "Action": [
-                  "ec2:CreateNetworkInterface",
-                  "ec2:CreateNetworkInterfacePermission",
-                  "ec2:DescribeDhcpOptions",
-                  "ec2:DescribeNetworkInterfaces",
-                  "ec2:DeleteNetworkInterface",
-                  "ec2:DescribeSubnets",
-                  "ec2:DescribeSecurityGroups",
-                  "ec2:DescribeVpcs"
-                ]
-              }},
-              {{
-                 "Effect": "Allow",
-                 "Action": ["s3:*"],
-                 "Resource": [
-                   "arn:aws:s3:::my-pulumi-state",
-                   "arn:aws:s3:::my-pulumi-state/*"
-                 ]
-              }},
-              {{
-                 "Effect": "Allow",
-                 "Action": [
-                   "codestar-connections:GetConnection",
-                   "codestar-connections:UseConnection",
-                   "codestar-connections:ListTagsForResource"
-                 ],
-                 "Resource": "{args['github_connection']}"
-              }},
-              {{
-                 "Effect": "Allow",
-                 "Action": ["kms:*"],
-                 "Resource": [
-                   "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"                
-                 ]
-              }},
-              {{
-                  "Effect": "Allow",
-                  "Action": [
-                      "iam:ListRolePolicies",
-                      "iam:GetRole",
-                      "iam:GetRolePolicy",
-                      "iam:ListAttachedRolePolicies"
-                  ],
-                  "Resource": "*"
-              }},
-              {{
-                  "Effect": "Allow",
-                  "Action": [
-                      "ec2:*"
-                  ],
-                  "Resource": "*"                
-              }},
-              {{
-                  "Effect": "Allow",
-                  "Action": [
-                      "codebuild:BatchGetProjects"
-                  ],
-                  "Resource": "*"
-              }},
-              {{
-                  "Effect": "Allow",
-                  "Action": [
-                      "codepipeline:GetPipeline",
-                      "codepipeline:ListTagsForResource"
-                  ],
-                  "Resource": "*"
-              }}
+                    "codestar-connections:GetConnection",
+                    "codestar-connections:UseConnection",
+                    "codestar-connections:ListTagsForResource"
+                ],
+                "Resource": "{args['github_connection']}"
+                }}
             ]
         }}
     """))
@@ -143,7 +45,7 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name,
         name=f"{project_name}-{environment}",
         description=f"codebuild project for {project_name} in {environment}",
         build_timeout=5,
-        service_role=codebuild_role.arn,
+        service_role=codebuild_role_arn,
         artifacts=aws.codebuild.ProjectArtifactsArgs(
             type="CODEPIPELINE",
         ),
@@ -175,7 +77,8 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name,
             "Name": project_name,
             "Environment": environment,
             "Managed By": "Pulumi",
-        })
+        }
+    )
 
 # def create_codebuild_pullrequest_project(environment, pipeline_bucket, project_name, github_connection):
 #     """Create a CodeBuild Pull Request Project whose source is a GitHub repo and whose builds 
@@ -185,9 +88,7 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name,
 #     IMPORTANT: We are importing resources built in the previous create_codebuild_pipeline_project methods
 #     """
 #     codebuild_bucket = aws.get(
-#         f"codeBuildBucket-{project_name}-{environment},
-
-
+#         f"codeBuildBucket-{project_name}-{environment}""
 #     )
 
 def create_pipeline(infra_projects, buckets, roles, environment):
@@ -264,22 +165,6 @@ def create_pipeline(infra_projects, buckets, roles, environment):
                     "codestar-connections:UseConnection"
                 ],
                 "Resource": "{args['github_connection']}"
-                }},
-                {{
-                "Effect": "Allow",
-                "Action": [
-                    "codebuild:BatchGetBuilds",
-                    "codebuild:BatchGetProjects",
-                    "codebuild:StartBuild"
-                ],
-                "Resource": "*"
-                }},
-                {{
-                    "Effect": "Allow",
-                    "Action": ["kms:*"],
-                    "Resource": [
-                    "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"                
-                    ]
                 }}
             ]
             }}
