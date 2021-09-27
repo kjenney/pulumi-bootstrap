@@ -92,7 +92,7 @@ def pulumi_program():
                     {
                     "Effect": "Allow",
                     "Principal": {
-                        "Service": "codepipeline.amazonaws.com"
+                        "Service": "codebuild.amazonaws.com"
                     },
                     "Action": "sts:AssumeRole"
                     }
