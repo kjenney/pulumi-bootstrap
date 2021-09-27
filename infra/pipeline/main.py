@@ -12,6 +12,10 @@ from bootstrap import *
 
 # Deploy CodePipeline with CodeBuild projects for each piece of infra
 
+def test():
+    """A Test Method to see how PR testing would look"""
+    print('Testing')
+
 def pulumi_program():
     config = pulumi.Config()
     environment = config.require('environment')
@@ -32,6 +36,5 @@ def pulumi_program():
     roles['codepipeline_role_arn'] = iam_reference.get_output("codepipeline_role_arn")
     roles['codepipeline_role_id'] = iam_reference.get_output("codepipeline_role_id")
     create_pipeline(infra_projects, buckets, roles, environment)
-    #create_webhook()
 
-stack = manage(args(), 'pipeline', pulumi_program)
+stack = manage(args(), get_project_name(), pulumi_program)

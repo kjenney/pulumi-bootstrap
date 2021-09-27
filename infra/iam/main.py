@@ -10,7 +10,7 @@ import os
 sys.path.append("../../shared")
 from bootstrap import *
 
-# Deploy CodePipeline with CodeBuild projects for each piece of infra
+# Deploy IAM with CodeBuild projects for each piece of infra
 
 def pulumi_program():
     config = pulumi.Config()
@@ -199,5 +199,4 @@ def pulumi_program():
     pulumi.export(f"codepipeline_role_arn", codepipeline_role.arn)
     pulumi.export(f"codepipeline_role_id", codepipeline_role.id)
 
-stack = manage(args(), 'iam', pulumi_program)
-
+stack = manage(args(), get_project_name(), pulumi_program)

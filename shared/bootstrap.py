@@ -22,7 +22,7 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name,
     codebuild_role_id = roles[f"codebuild_role_{project_name}_id"]
     # Use the existing S3 bucket
     codebuild_bucket = buckets[f"codebuild_{project_name}_bucket_id"]
-    codepipeline_bucket = buckets["codepipeline_bucket_id"]
+    #codepipeline_bucket = buckets["codepipeline_bucket_id"]
     # Create IAM policy to create github connections for CodeBuild Projects
     codebuild_policy = aws.iam.RolePolicy(f"codebuldPolicy_{project_name}_{environment}",
         role=codebuild_role_id,
@@ -80,16 +80,70 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name,
         }
     )
 
-# def create_codebuild_pullrequest_project(environment, pipeline_bucket, project_name, github_connection):
-#     """Create a CodeBuild Pull Request Project whose source is a GitHub repo and whose builds 
-#     are triggered by the creation of a Pull Request or a push to a branch that is updating
-#     a Pull Request.
+def create_codebuild_pullrequest_project(environment, buckets, roles, project_name):
+    """Create a CodeBuild Project whose source is from a Webhook triggered when a Pull Request is
+    created or updated
+    """
+    codebuild_role_arn = roles[f"codebuild_role_{project_name}_arn"]
+    codebuild_role_id = roles[f"codebuild_role_{project_name}_id"]
+    # Use the existing S3 bucket
+    codebuild_bucket = buckets[f"codebuild_{project_name}_bucket_id"]
+    codebuild_project = aws.codebuild.Project(f"{project_name}-{environment}-pullrequest",
+        name=f"{project_name}-{environment}",
+        description=f"codebuild project for {project_name} in {environment} - Pull Request",
+        build_timeout=5,
+        service_role=codebuild_role_arn,
+        artifacts=aws.codebuild.ProjectArtifactsArgs(
+            type="CODEPIPELINE",
+        ),
+        cache=aws.codebuild.ProjectCacheArgs(
+            type="S3",
+            location=codebuild_bucket,
+        ),
+        environment=aws.codebuild.ProjectEnvironmentArgs(
+            compute_type="BUILD_GENERAL1_SMALL",
+            image="aws/codebuild/standard:1.0",
+            type="LINUX_CONTAINER",
+            image_pull_credentials_type="CODEBUILD",
+        ),
+        logs_config=aws.codebuild.ProjectLogsConfigArgs(
+            cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
+                group_name="log-group",
+                stream_name="log-stream",
+            ),
+            s3_logs=aws.codebuild.ProjectLogsConfigS3LogsArgs(
+                status="ENABLED",
+                location=codebuild_bucket.apply(lambda id: f"{id}/build-log"),
+            ),
+        ),
+        source=aws.codebuild.ProjectSourceArgs(
+            type="CODEPIPELINE",
+            buildspec=f"infra/{project_name}/buildspec_pr.yml"
+        ),
+        tags={
+            "Name": project_name,
+            "Environment": environment,
+            "Managed By": "Pulumi",
+        }
+    )
 
-#     IMPORTANT: We are importing resources built in the previous create_codebuild_pipeline_project methods
-#     """
-#     codebuild_bucket = aws.get(
-#         f"codeBuildBucket-{project_name}-{environment}""
-#     )
+def create_codebuild_pullrequest_webhook(environment, project_name):
+    """Create a Webhook for a CodeBuild Project"""
+    webhook = aws.codebuild.Webhook(f"{project_name}-{environment}",
+        project_name=f"{project_name}-{environment}-pullrequest",
+        build_type="BUILD",
+        filter_groups=[aws.codebuild.WebhookFilterGroupArgs(
+            filters=[
+                aws.codebuild.WebhookFilterGroupFilterArgs(
+                    type="EVENT",
+                    pattern="PULL_REQUEST_CREATED",
+                ),
+                aws.codebuild.WebhookFilterGroupFilterArgs(
+                    type="EVENT",
+                    pattern="PULL_REQUEST_UPDATED",
+                ),
+            ],
+        )])
 
 def create_pipeline(infra_projects, buckets, roles, environment):
     """Create a CodePipeline from a list of Infrastructure, 
@@ -173,31 +227,8 @@ def create_pipeline(infra_projects, buckets, roles, environment):
     pulumi.export(f"codepipeline_id", codepipeline.id)
     for project_name in infra_projects:
         create_codebuild_pipeline_project(environment, buckets, roles, project_name, github_connection)
-        #create_codebuild_pullrequest_project(environment, codepipeline_bucket, infra, github_connection)
-
-def create_webhook():
-    webhook_secret = "super-secret"
-    bar_webhook = aws.codepipeline.Webhook("barWebhook",
-        authentication="GITHUB_HMAC",
-        authentication_configuration={
-            "secretToken": webhook_secret,
-        },
-        filters=[{
-            "jsonPath": "$.ref",
-            "matchEquals": "refs/heads/{Branch}",
-        }],
-        target_action="Source",
-        target_pipeline=bar_pipeline.name)
-    # Wire the CodePipeline webhook into a GitHub repository.
-    bar_repository_webhook = github.RepositoryWebhook("barRepositoryWebhook",
-        configuration={
-            "contentType": "json",
-            "insecureSsl": True,
-            "secret": webhook_secret,
-            "url": bar_webhook.url,
-        },
-        events=["push"],
-        repository=github_repository["repo"]["name"])
+        create_codebuild_pullrequest_project(environment, buckets, roles, project_name)
+        create_codebuild_pullrequest_webhook(environment, project_name)
 
 def args():
     parser = argparse.ArgumentParser(description='Manage a Pulumi automation stack.')
@@ -273,3 +304,6 @@ def get_config(environment):
                 return yaml.safe_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
+
+def get_project_name():
+    return os.path.realpath(__file__)

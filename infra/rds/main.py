@@ -1,8 +1,13 @@
 import managor
 import json
+import os
 import pulumi
 import pulumi_aws as aws
 from mysql.connector import connect
+import sys
+
+sys.path.append("../../shared")
+from bootstrap import *
 
 def pulumi_program():
     config = pulumi.Config()
@@ -64,8 +69,7 @@ def pulumi_program():
     pulumi.export("db_user", db_user)
     pulumi.export("db_pass", db_pass)
 
-args = managor.args()
-stack = managor.manage(args, pulumi_program)
+stack = manage(args(), get_project_name(), pulumi_program)
 print(f"db host url: {stack.outputs['host'].value}")
 print(f"db name: {stack.outputs['db_name'].value}")
 
