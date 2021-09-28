@@ -69,7 +69,7 @@ def pulumi_program():
     pulumi.export("db_user", db_user)
     pulumi.export("db_pass", db_pass)
 
-stack = manage(args(), get_project_name(), pulumi_program)
+stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
 print(f"db host url: {stack.outputs['host'].value}")
 print(f"db name: {stack.outputs['db_name'].value}")
 

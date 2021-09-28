@@ -70,4 +70,4 @@ def pulumi_program():
     pulumi.export("vpc_id", vpc.id)
 
 # Deploy VPC
-stack = manage(args(), get_project_name(), pulumi_program)
+stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)

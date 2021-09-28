@@ -33,6 +33,6 @@ def pulumi_program():
         pulumi.export(k, pulumi.Output.secret(v))
         #pulumi.export(k,v)
 
-stack = manage(args(), 'secrets', pulumi_program)
+stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
 os.remove(decrypted_file)
 

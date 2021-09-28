@@ -16,4 +16,4 @@ def test():
     """A Test Method to see how PR testing would look"""
     print('Testing')
 
-stack = manage(args(), get_project_name(), test)
+stack = manage(args(), os.path.basename(os.getcwd()), test)

@@ -304,6 +304,3 @@ def get_config(environment):
                 return yaml.safe_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
-
-def get_project_name():
-    return os.path.realpath(__file__)

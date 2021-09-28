@@ -40,6 +40,6 @@ def pulumi_program():
     )
     pulumi.export(f"codepipeline_bucket_id", codepipeline_bucket.id)
 
-stack = manage(args(), 's3', pulumi_program)
+stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
 
 

@@ -199,4 +199,4 @@ def pulumi_program():
     pulumi.export(f"codepipeline_role_arn", codepipeline_role.arn)
     pulumi.export(f"codepipeline_role_id", codepipeline_role.id)
 
-stack = manage(args(), get_project_name(), pulumi_program)
+stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)

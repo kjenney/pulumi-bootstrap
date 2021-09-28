@@ -37,4 +37,4 @@ def pulumi_program():
     roles['codepipeline_role_id'] = iam_reference.get_output("codepipeline_role_id")
     create_pipeline(infra_projects, buckets, roles, environment)
 
-stack = manage(args(), get_project_name(), pulumi_program)
+stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
