@@ -10,7 +10,7 @@ import os
 sys.path.append("../../shared")
 from bootstrap import *
 
-# Deploy IAM with CodeBuild projects for each piece of infra
+# Deploy IAM roles and policies for CodePipeline and CodeBuild projects for each piece of infra
 
 def pulumi_program():
     config = pulumi.Config()

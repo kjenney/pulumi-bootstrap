@@ -12,10 +12,6 @@ from bootstrap import *
 
 # Deploy CodePipeline with CodeBuild projects for each piece of infra
 
-def test():
-    """A Test Method to see how PR testing would look"""
-    print('Testing')
-
 def pulumi_program():
     config = pulumi.Config()
     environment = config.require('environment')

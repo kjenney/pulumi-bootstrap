@@ -89,12 +89,12 @@ def create_codebuild_pullrequest_project(environment, buckets, roles, project_na
     # Use the existing S3 bucket
     codebuild_bucket = buckets[f"codebuild_{project_name}_bucket_id"]
     codebuild_project = aws.codebuild.Project(f"{project_name}-{environment}-pullrequest",
-        name=f"{project_name}-{environment}",
+        name=f"{project_name}-{environment}-pullrequest",
         description=f"codebuild project for {project_name} in {environment} - Pull Request",
         build_timeout=5,
         service_role=codebuild_role_arn,
         artifacts=aws.codebuild.ProjectArtifactsArgs(
-            type="CODEPIPELINE",
+            type="NO_ARTIFACTS",
         ),
         cache=aws.codebuild.ProjectCacheArgs(
             type="S3",
@@ -117,7 +117,8 @@ def create_codebuild_pullrequest_project(environment, buckets, roles, project_na
             ),
         ),
         source=aws.codebuild.ProjectSourceArgs(
-            type="CODEPIPELINE",
+            type="GITHUB",
+            location="https://github.com/kjenney/pulumi-bootstrap.git",
             buildspec=f"infra/{project_name}/buildspec_pr.yml"
         ),
         tags={

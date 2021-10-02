@@ -2,8 +2,9 @@
 infra:
   - secrets
   - vpc
-  - s3
-  - iam
+  - pipeline_s3
+  - pipeline_iam
+  - pipeline_webhook
   - pipeline
 vpc:
   cidr: 10.2.0.0/16
