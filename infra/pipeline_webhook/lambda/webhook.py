@@ -2,15 +2,14 @@ import json
 import os
 
 def handler(event, context):
-    #print('## PULL REQUEST')
-    #print(event)
+    print('## PULL REQUEST')
+    print(event)
     #for k in event:
     #    print(k)
     #print(event.keys())
     #print(event['version'])
-    json_dict = json.load(event)
-    print('## PULL REQUEST')
-    print(json_dict['body']['pull_request'])
+    #print('## PULL REQUEST')
+    print(event['body']['pull_request'])
     #print(event['body'][0]['action'])
     # If the Pull Request is not closed - let's do something
     # if event['body']['pull_request']['closed_at'] != 'null':
