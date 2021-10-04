@@ -4,6 +4,7 @@ import os
 def handler(event, context):
     print('## EVENT')
     print(event)
+    print(event['version'])
     # If the Pull Request is not closed - let's do something
     if event['body']['pull_request']['closed_at'] != 'null':
         # If the Pull Request is merged Zip up the source to S3 via CodeBuild else Lint the code
