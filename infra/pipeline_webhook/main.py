@@ -4,6 +4,7 @@ import json
 from yaml.events import CollectionEndEvent
 import pulumi
 import pulumi_aws as aws
+import pulumi_github as github
 from pulumi import automation as auto
 import sys
 import yaml
@@ -22,6 +23,11 @@ def pulumi_program():
     environment = config.require('environment')
     data = get_config(environment)
     infra_projects = data['infra']
+
+    # Export GitHub Token to provision the Webhook
+    secrets = pulumi.StackReference(f"secrets-{environment}")
+    github_token_secret = secrets.get_output("github_token")
+    github_provider = github.Provider(resource_name='github_provider', token=github_token_secret)
     
     label_tags = {
         "Project" : project_name,
@@ -59,7 +65,12 @@ def pulumi_program():
         code=pulumi.FileArchive('/tmp/source.zip'),
         runtime="python3.8",
         role=lambda_role.arn,
-        handler="webhook.handler")
+        handler="webhook.handler",
+        environment=aws.lambda_.FunctionEnvironmentArgs(
+            variables={
+                "projects": ','.join(infra_projects),
+            },
+        ))
 
     # Give API Gateway permissions to invoke the Lambda
     lambda_permission = aws.lambda_.Permission("lambdaPermission",
@@ -68,12 +79,24 @@ def pulumi_program():
         function=lambda_function)
 
     # Set up the API Gateway
-    apigw = aws.apigatewayv2.Api("httpApiGateway",
+    apigw = aws.apigatewayv2.Api(f"httpApiGateway-{environment}",
         protocol_type="HTTP",
         route_key="POST /",
         target=lambda_function.invoke_arn)
 
     pulumi.export('api_base_url', apigw.api_endpoint)
     pulumi.export(f"lambda_function_arn", lambda_function.arn)
+
+    # Register webhook
+    webhook = github.RepositoryWebhook(f"bootstrap-webhook-{environment}",
+        repository='pulumi-bootstrap',
+        configuration=github.RepositoryWebhookConfigurationArgs(
+            url=apigw.api_endpoint,
+            content_type="json",
+            insecure_ssl=False,
+        ),
+        active=True,
+        events=["pull_request"],
+        opts=pulumi.ResourceOptions(provider=github_provider))
 
 stack = manage(args(), project_name, pulumi_program)
