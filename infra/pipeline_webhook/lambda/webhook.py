@@ -5,9 +5,9 @@ def handler(event, context):
     print('## EVENT')
     print(event)
     # If the Pull Request is not closed - let's do something
-    if event['pull_request']['closed_at'] != 'null':
+    if event['body']['pull_request']['closed_at'] != 'null':
         # If the Pull Request is merged Zip up the source to S3 via CodeBuild else Lint the code
-        if event['pull_request']['merged_at'] != 'null':
+        if event['body']['pull_request']['merged_at'] != 'null':
             print('Kick off CodeBuild S3 Copy')
         else:
             print('Kick off CodeBuild Lint')
