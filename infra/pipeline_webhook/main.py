@@ -39,6 +39,7 @@ def pulumi_program():
     
     # Create Secrets Manager secret with GitHub Token for the CodeBuild jobs
     github_token_secret = aws.secretsmanager.Secret(f"{id}-webhook-github-token-secret",
+        name = f"{id}-webhook-github-token-secret",
         description = "The GitHub Token for use by CodeBuild projects to test and build source from GitHub code",
         tags = label_tags
     )
@@ -46,6 +47,8 @@ def pulumi_program():
     github_token_secret_value = aws.secretsmanager.SecretVersion(f"{id}-webhook-github-token-secret-value",
         secret_id=github_token_secret.id,
         secret_string=github_token)
+
+    pulumi.export('github_token_secret_id', github_token_secret.id)
 
     # Create the IAM Role to give the CodeBuild Jobs access to the github_token_secret
     codebuild_role = aws.iam.Role(f"{id}-codebuldRole", assume_role_policy="""{
@@ -91,7 +94,7 @@ def pulumi_program():
     buildspec_functional={'version': '0.2',
                           'env': {
                               'secrets-manager': {
-                                  'GITHUB_TOKEN': f"{github_token_secret.id}"
+                                  'GITHUB_TOKEN': f"{id}-webhook-github-token-secret"
                               }
                           },
                           'phases': {
