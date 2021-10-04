@@ -4,8 +4,9 @@ import os
 def handler(event, context):
     print('## EVENT')
     print(event)
-    for k in event:
-        print(k)
+    #for k in event:
+    #    print(k)
+    print(event.keys())
     print(event['version'])
     #print(event['body'][0]['action'])
     # If the Pull Request is not closed - let's do something
