@@ -15,7 +15,8 @@ def handler(event, context):
             #response = client.start_build(projectName='string')
         else:
             print('Kick off CodeBuild Lint')
-            #response = client.start_build(projectName='string')
+            codebuild_project_functional = os.environ.get('codebuild_project_functional')
+            client.start_build(projectName=codebuild_project_functional)
     return {
         "statusCode": 200,
         "body": json.dumps(event)

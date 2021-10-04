@@ -16,7 +16,7 @@ from bootstrap import *
 
 project_name = os.path.basename(os.getcwd())
 
-# Deploy Lambda with CodeBuild projects for each piece of infra
+# Deploy Lambda to Trigger CodeBuild Projects for testing and triggered CodePipeline on merge
 
 def pulumi_program():
     config = pulumi.Config()
@@ -24,11 +24,6 @@ def pulumi_program():
     data = get_config(environment)
     infra_projects = data['infra']
 
-    # Export GitHub Token to provision the Webhook
-    secrets = pulumi.StackReference(f"secrets-{environment}")
-    github_token_secret = secrets.get_output("github_token")
-    github_provider = github.Provider(resource_name='github_provider', token=github_token_secret)
-    
     label_tags = {
         "Project" : project_name,
         "ManagedBy"  : 'Pulumi',
@@ -36,6 +31,112 @@ def pulumi_program():
     }
 
     id = "-".join(label_tags.values())
+
+    # Export GitHub Token to provision the Webhook
+    secrets = pulumi.StackReference(f"secrets-{environment}")
+    github_token = secrets.get_output("github_token")
+    github_provider = github.Provider(resource_name='github_provider', token=github_token)
+    
+    # Create Secrets Manager secret with GitHub Token for the CodeBuild jobs
+    github_token_secret = aws.secretsmanager.Secret(f"{id}-webhook-github-token-secret",
+        description = "The GitHub Token for use by CodeBuild projects to test and build source from GitHub code",
+        tags = label_tags
+    )
+
+    github_token_secret_value = aws.secretsmanager.SecretVersion(f"{id}-webhook-github-token-secret-value",
+        secret_id=github_token_secret.id,
+        secret_string=github_token)
+
+    # Create the IAM Role to give the CodeBuild Jobs access to the github_token_secret
+    codebuild_role = aws.iam.Role(f"{id}-codebuldRole", assume_role_policy="""{
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "codebuild.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+            }
+        ]
+        }
+    """)
+
+    codebuild_policy = aws.iam.RolePolicy(f"{id}-codebuldPolicy",
+        role=codebuild_role.id,
+        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn).apply(lambda args: f"""{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "secretsmanager:*"
+                    ],
+                    "Resource": "{args['github_token_secret']}"
+                }},
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                    ],
+                    "Resource": ["*"]
+                }}
+            ]
+        }}
+    """))
+
+    # Create the CodeBuild Job that will be used for Functional Testing
+    buildspec_functional={'version': '0.2',
+                          'phases': {
+                              'install': {
+                                 'runtime-versions': {
+                                     'python': '3.x'
+                                 },
+                                 'commands': [
+                                     'curl -fsSL https://get.pulumi.com | sh',
+                                     'PATH=$PATH:/root/.pulumi/bin'
+                                 ]
+                              },
+                              'pre_build': {
+                                  'commands': [
+                                      'git clone git@github.com:kjenney/pulumi-bootstrap.git'
+                                  ]
+                              },
+                              'build': {
+                                  'commands': [
+                                      'cd pulumi-bootstrap',
+                                      'pip install -r requirements.txt'
+                                  ]
+                              }
+                          }}
+
+    codebuild_project_functional = aws.codebuild.Project(f"{id}-codebuild-functional-testing",
+        description=f"codebuild project for {project_name} in {environment}",
+        build_timeout=5,
+        service_role=codebuild_role.arn,
+        artifacts=aws.codebuild.ProjectArtifactsArgs(
+            type="NO_ARTIFACTS",
+        ),
+        environment=aws.codebuild.ProjectEnvironmentArgs(
+            compute_type="BUILD_GENERAL1_SMALL",
+            image="aws/codebuild/standard:1.0",
+            type="LINUX_CONTAINER",
+            image_pull_credentials_type="CODEBUILD",
+        ),
+        logs_config=aws.codebuild.ProjectLogsConfigArgs(
+            cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
+                group_name="log-group",
+                stream_name="log-stream",
+            )
+        ),
+        source=aws.codebuild.ProjectSourceArgs(
+            type="NO_SOURCE",
+            buildspec=yaml.dump(buildspec_functional, indent=4, default_flow_style=False)
+        ),
+        tags=label_tags
+    )
 
     # Create the role for the Lambda to assume
     lambda_role = aws.iam.Role(f"{id}-lambda-role",
@@ -87,6 +188,7 @@ def pulumi_program():
         environment=aws.lambda_.FunctionEnvironmentArgs(
             variables={
                 "projects": ','.join(infra_projects),
+                "codebuild_project_functional": codebuild_project_functional.id
             },
         ))
 
