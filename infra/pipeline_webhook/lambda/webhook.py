@@ -1,6 +1,6 @@
 import json
 import os
-import boto
+import boto3
 
 def handler(event, context):
     body = event['body']
