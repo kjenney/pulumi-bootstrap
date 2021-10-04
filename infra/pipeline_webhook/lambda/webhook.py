@@ -8,8 +8,7 @@ def handler(event, context):
     #    print(k)
     #print(event.keys())
     #print(event['version'])
-    print(event['body'][0])
-    print(event['body'][0]['pull_request'][0])
+    print(event['body']['pull_request'][0])
     #print(event['body'][0]['action'])
     # If the Pull Request is not closed - let's do something
     # if event['body']['pull_request']['closed_at'] != 'null':
