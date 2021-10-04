@@ -53,6 +53,24 @@ def pulumi_program():
         tags = label_tags,
     )
 
+    lambda_policy = aws.iam.RolePolicy(f"{id}-lambda-policy",
+        role=lambda_role.id,
+        policy=f"""{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                "Effect": "Allow",
+                "Action": [
+                    "codebuild:BatchGetBuilds",
+                    "codebuild:BatchGetProjects",
+                    "codebuild:StartBuild"
+                ],
+                "Resource": "*"
+                }}
+            ]
+            }}
+            """)
+
     # Attach the fullaccess policy to the Lambda role created above
     role_policy_attachment = aws.iam.RolePolicyAttachment("lambdaRoleAttachment",
         role=lambda_role,
