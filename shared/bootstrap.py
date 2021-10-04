@@ -58,6 +58,12 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name,
             image="aws/codebuild/standard:1.0",
             type="LINUX_CONTAINER",
             image_pull_credentials_type="CODEBUILD",
+            environment_variables=[
+                aws.codebuild.ProjectEnvironmentEnvironmentVariableArgs(
+                    name="SOME_KEY1",
+                    value="SOME_VALUE1",
+                ),
+            ],
         ),
         logs_config=aws.codebuild.ProjectLogsConfigArgs(
             cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
