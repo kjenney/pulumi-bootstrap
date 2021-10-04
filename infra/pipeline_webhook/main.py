@@ -89,6 +89,11 @@ def pulumi_program():
 
     # Create the CodeBuild Job that will be used for Functional Testing
     buildspec_functional={'version': '0.2',
+                          'env': {
+                              'secrets-manager': {
+                                  'GITHUB_TOKEN': f"{github_token_secret.id}"
+                              }
+                          },
                           'phases': {
                               'install': {
                                  'runtime-versions': {
