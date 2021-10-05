@@ -5,9 +5,7 @@ import yaml
 
 s3 = boto3.resource(
     's3',
-    region_name='us-east-1',
-    aws_access_key_id=KEY_ID,
-    aws_secret_access_key=ACCESS_KEY
+    region_name='us-east-1'
 )
 
 def buildspec_functional(branch):
