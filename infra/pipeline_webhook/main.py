@@ -193,6 +193,8 @@ def pulumi_program():
                         "Action": ["s3:*"],
                         "Resource": [
                             "arn:aws:s3:::{args['codebuild_functional_bucket']}",
+                            "arn:aws:s3:::{args['codebuild_functional_bucket']}/*",
+                            "arn:aws:s3:::{args['codebuild_main_bucket']}",
                             "arn:aws:s3:::{args['codebuild_main_bucket']}/*"
                         ]
                     }}
