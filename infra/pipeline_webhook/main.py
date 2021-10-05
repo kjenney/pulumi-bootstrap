@@ -18,6 +18,16 @@ project_name = os.path.basename(os.getcwd())
 
 # Deploy Lambda to Trigger CodeBuild Projects for testing and triggered CodePipeline on merge
 
+from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
+from typing import Union
+
+def zip_dir(zip_name: str, source_dir: Union[str, os.PathLike]):
+    src_path = Path(source_dir).expanduser().resolve(strict=True)
+    with ZipFile(zip_name, 'w', ZIP_DEFLATED) as zf:
+        for file in src_path.rglob('*'):
+            zf.write(file, file.relative_to(src_path))
+
 def pulumi_program():
     config = pulumi.Config()
     environment = config.require('environment')
@@ -195,7 +205,8 @@ def pulumi_program():
         role=lambda_role,
         policy_arn=aws.iam.ManagedPolicy.AWS_LAMBDA_BASIC_EXECUTION_ROLE)
 
-    zipfile.ZipFile('/tmp/source.zip', mode='w').write('lambda/webhook.py','webhook.py')
+    # Zip up the code with dependencies
+    zip_dir('/tmp/source.zip','./lambda')
 
     # Create the lambda to execute
     lambda_function = aws.lambda_.Function(f"{id}-lambda-function",
