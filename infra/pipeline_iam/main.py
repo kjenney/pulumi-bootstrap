@@ -127,9 +127,9 @@ def pulumi_program():
                     "Effect": "Allow",
                     "Resource": ["*"],
                     "Action": [
-                    "logs:CreateLogGroup",
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents"
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
                     ]
                 }},
                 {{

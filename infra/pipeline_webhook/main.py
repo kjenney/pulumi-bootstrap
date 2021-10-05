@@ -48,8 +48,6 @@ def pulumi_program():
         secret_id=github_token_secret.id,
         secret_string=github_token)
 
-    pulumi.export('github_token_secret_id', github_token_secret.id)
-
     # Create the IAM Role to give the CodeBuild Jobs access to the github_token_secret
     codebuild_role = aws.iam.Role(f"{id}-codebuldRole", assume_role_policy="""{
         "Version": "2012-10-17",
@@ -109,7 +107,7 @@ def pulumi_program():
                               },
                               'pre_build': {
                                   'commands': [
-                                      'git clone git@github.com:kjenney/pulumi-bootstrap.git'
+                                      "git clone https://$(GITHUB_TOKEN)@github.com/kjenney/pulumi-bootstrap.git"
                                   ]
                               },
                               'build': {
