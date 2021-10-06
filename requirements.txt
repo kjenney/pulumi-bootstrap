@@ -7,3 +7,4 @@ PyYAML>=5.4.1
 boto3>=1.18.43
 cryptography>=3.4.8
 pylint>=2.11.1
+PyGithub>=1.55
