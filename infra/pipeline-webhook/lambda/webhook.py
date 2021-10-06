@@ -8,12 +8,14 @@ s3 = boto3.resource(
     region_name='us-east-1'
 )
 
+environment = os.environ.get('environment')
+
 def buildspec_functional(branch):
     """Create the CodeBuild Job that will be used for Functional Testing"""
     return {'version': '0.2',
             'env': {
                 'secrets-manager': {
-                    'GITHUB_TOKEN': "webhook-github-token-secret"
+                    'GITHUB_TOKEN': "webhook-github-token-secret-{environment}"
                 }
             },
             'phases': {

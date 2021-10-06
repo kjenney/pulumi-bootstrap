@@ -29,16 +29,32 @@ def pulumi_program():
         )
         pulumi.export(f"codebuild_{project}_bucket_id", codebuild_bucket.id)
 
+    ptags={
+        "Environment": environment,
+        "Managed By": "Pulumi",
+        "Name": f"codeBuildBucket-{environment}",
+    }
+
     codepipeline_bucket = aws.s3.Bucket(
         f"codePipelineBucket-{environment}", 
         acl="private",
-        tags={
-            "Environment": environment,
-            "Managed By": "Pulumi",
-            "Name": f"codeBuildBucket-{environment}",
-        }
+        tags=ptags
     )
     pulumi.export(f"codepipeline_bucket_id", codepipeline_bucket.id)
+
+    # Create the S3 Buckets that will be used by the Lambda and CodeBuild
+    codebuild_functional_bucket = aws.s3.Bucket(f"codebuild-functional-{environment}", 
+        acl="private",
+        tags=ptags
+    )
+
+    codebuild_main_bucket = aws.s3.Bucket(f"codebuild-main-{environment}",
+        acl="private",
+        tags=ptags
+    )
+
+    pulumi.export('codebuild_functional_bucket',codebuild_functional_bucket.id)
+    pulumi.export('codebuild_main_bucket',codebuild_main_bucket.id)
 
 stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
 
