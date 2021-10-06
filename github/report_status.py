@@ -2,10 +2,10 @@ import os
 import sys
 from github import Github
 
-token = os.environ.get('GITHUB_TOKEN')
-sha = os.environ.get('commit-sha')
 state = sys.argv[1]
 description = sys.argv[2]
+token = sys.argv[3]
+sha = sys.argv[4]
 
 print(sha)
 

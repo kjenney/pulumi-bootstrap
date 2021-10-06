@@ -1,20 +1,9 @@
-echo "Testing"
-echo $AWS_REGION
-echo $commit_sha
-
-if [ -z "$commit_sha" ]
-then
-      echo "\$commit-sha is empty"
+pylint $(git ls-files '*.py')
+if [ $? -eq 0 ]; then
+	state="success"
+	description="Lint Success"
 else
-      echo "\$commit-sha is NOT empty"
+	state="failure"
+	description="Lint Failure"
 fi
-
-# pylint $(git ls-files '*.py')
-# if [ $? -eq 0 ]; then
-# 	state="success"
-# 	description="Lint Success"
-# else
-# 	state="failure"
-# 	description="Lint Failure"
-# fi
-# python github/report_status.py $state $description
+python github/report_status.py $state $description $GITHUB_TOKEN $COMMIT_SHA
