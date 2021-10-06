@@ -10,7 +10,7 @@ s3 = boto3.resource(
 
 environment = os.environ.get('environment')
 
-def buildspec_functional(branch):
+def buildspec_functional(environment, branch):
     """Create the CodeBuild Job that will be used for Functional Testing"""
     return {'version': '0.2',
             'env': {
@@ -30,8 +30,7 @@ def buildspec_functional(branch):
                 },
                 'pre_build': {
                     'commands': [
-                        "git clone https://$(GITHUB_TOKEN)@github.com/kjenney/pulumi-bootstrap.git"
-                        f"git checkout {branch}"
+                        f"git clone --branch {branch} https://$(GITHUB_TOKEN)@github.com/kjenney/pulumi-bootstrap.git"
                     ]
                 },
                 'build': {
@@ -42,12 +41,12 @@ def buildspec_functional(branch):
                 }
             }}
 
-def buildspec_main():
+def buildspec_main(environment):
     """Create the CodeBuild Job that will be used to clone the main branch"""
     return {'version': '0.2',
             'env': {
                 'secrets-manager': {
-                    'GITHUB_TOKEN': "webhook-github-token-secret"
+                    'GITHUB_TOKEN': f"webhook-github-token-secret-{environment}"
                 }
             },
             'phases': {
@@ -86,13 +85,13 @@ def handler(event, context):
         print('Copy buildspec to S3 bucket to kick off CodeBuild')
         if body['pull_request']['merged_at']:
             s3_bucket_main = os.environ.get('s3_bucket_main')
-            buildspec = buildspec_main()
+            buildspec = buildspec_main(environment)
             content=yaml.dump(buildspec, indent=4, default_flow_style=False)
             s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
         else:
             s3_bucket_functional = os.environ.get('s3_bucket_functional')
             branch = body['pull_request']['head']['label']
-            buildspec = buildspec_functional(branch)
+            buildspec = buildspec_functional(environment, branch)
             content=yaml.dump(buildspec, indent=4, default_flow_style=False)
             s3.Object(s3_bucket_functional, 'buildspec.yml').put(Body=content)
     return {
