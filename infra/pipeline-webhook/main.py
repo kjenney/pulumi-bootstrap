@@ -216,7 +216,7 @@ def pulumi_program():
     """)
 
     trigger_codebuild_functional_policy = aws.iam.RolePolicy("trigger_codebuild_functional_policy",
-        role=codebuild_role.id,
+        role=trigger_codebuild_functional_role.id,
         policy=pulumi.Output.all(codebuild_project_functional_arn=codebuild_project_functional.arn).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
@@ -246,7 +246,7 @@ def pulumi_program():
     """)
 
     trigger_codebuild_main_policy = aws.iam.RolePolicy("trigger_codebuild_main_policy",
-        role=codebuild_role.id,
+        role=trigger_codebuild_main_role.id,
         policy=pulumi.Output.all(codebuild_project_main_arn=codebuild_project_main.arn).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
