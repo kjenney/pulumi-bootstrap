@@ -1,4 +1,5 @@
-echo $commit_sha
+echo "Testing"
+echo $(commit_sha)
 
 pylint $(git ls-files '*.py')
 if [ $? -eq 0 ]; then
