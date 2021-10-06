@@ -36,6 +36,7 @@ def buildspec_functional(environ, branch, sha):
                 },
                 'build': {
                     'commands': [
+                        'printenv'
                         'cd pulumi-bootstrap',
                         'pip install -r requirements.txt',
                         "./check_status.sh"
