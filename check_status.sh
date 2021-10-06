@@ -1,12 +1,12 @@
 echo "Testing"
 echo $AWS_REGION
-echo $commit_sha
+echo $commit-sha
 
-if [ -z "$commit_sha" ]
+if [ -z "$commit-sha" ]
 then
-      echo "\$commit_sha is empty"
+      echo "\$commit-sha is empty"
 else
-      echo "\$commit_sha is NOT empty"
+      echo "\$commit-sha is NOT empty"
 fi
 
 # pylint $(git ls-files '*.py')
