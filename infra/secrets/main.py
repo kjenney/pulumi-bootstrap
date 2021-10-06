@@ -11,12 +11,12 @@ from encrypt_decrypt_file import decrypt_file
 # Decrypting Secrets Infra Deployment
 
 DECRYPTED_FILE = 'secrets.json'
-
+ENCRYPTED_FILE = 'secrets.json.encrypted'
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)s: %(asctime)s: %(message)s')
 if decrypt_file(DECRYPTED_FILE):
-    logging.info("%d.encrypted decrypted to %d", DECRYPTED_FILE)
+    logging.info("%d decrypted to %d", DECRYPTED_FILE, ENCRYPTED_FILE)
 os.rename(f"{DECRYPTED_FILE}.decrypted",DECRYPTED_FILE)
 
 # Deploy Secrets to Pulumi State

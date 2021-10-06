@@ -89,7 +89,8 @@ disable=raw-checker-failed,
         too-many-lines,
         line-too-long,
         missing-module-docstring,
-        wrong-import-position
+        wrong-import-position,
+        duplicate-code
 
 
 # Enable the message, report, category or checker with the given id(s). You can
