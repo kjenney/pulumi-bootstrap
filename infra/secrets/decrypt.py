@@ -11,5 +11,5 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)s: %(asctime)s: %(message)s')
 #cmk_id, cmk_arn = retrieve_cmk('Pulumi State Encrypt Key')
 if decrypt_file(DECRYPTED_FILE):
-    logging.info("%d decrypted to %d", ENCRYPTED_FILE, DECRYPTED_FILE)
+    logging.info("%s decrypted to %s", ENCRYPTED_FILE, DECRYPTED_FILE)
 os.rename(f"{DECRYPTED_FILE}.decrypted",DECRYPTED_FILE)
