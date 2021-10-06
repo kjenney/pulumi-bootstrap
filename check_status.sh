@@ -1,6 +1,8 @@
 GITHUB_TOKEN="$1"
 COMMIT_SHA="$2"
 
+echo $COMMIT_SHA
+
 pylint $(git ls-files '*.py')
 if [ $? -eq 0 ]; then
 	state="success"
