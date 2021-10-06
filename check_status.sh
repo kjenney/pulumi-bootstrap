@@ -1,8 +1,8 @@
 echo "Testing"
 echo $AWS_REGION
-echo $commit-sha
+echo $commit_sha
 
-if [ -z "$commit-sha" ]
+if [ -z "$commit_sha" ]
 then
       echo "\$commit-sha is empty"
 else

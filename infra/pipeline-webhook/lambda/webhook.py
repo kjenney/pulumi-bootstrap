@@ -17,7 +17,7 @@ def buildspec_functional(environ, branch, sha):
                 'secrets-manager': {
                     'GITHUB_TOKEN': f"webhook-github-token-secret-{environ}"
                 },
-                'commit-sha': sha
+                'COMMIT_SHA': sha
             },
             'phases': {
                 'install': {
@@ -31,7 +31,7 @@ def buildspec_functional(environ, branch, sha):
                 },
                 'pre_build': {
                     'commands': [
-                        f"git clone --branch {branch} https://$(GITHUB_TOKEN)@github.com/kjenney/pulumi-bootstrap.git"
+                        f"git clone --branch {branch} https://$GITHUB_TOKEN@github.com/kjenney/pulumi-bootstrap.git"
                     ]
                 },
                 'build': {
