@@ -76,7 +76,7 @@ def pulumi_program():
 
     codebuild_policy = aws.iam.RolePolicy("codebuldPolicy",
         role=codebuild_role.id,
-        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn).apply(lambda args: f"""{{
+        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn,codebuild_functional_bucket=codebuild_functional_bucket,codebuild_main_bucket=codebuild_main_bucket).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
                 {{
@@ -94,6 +94,16 @@ def pulumi_program():
                         "logs:PutLogEvents"
                     ],
                     "Resource": ["*"]
+                }},
+                {{
+                    "Effect": "Allow",
+                    "Action": ["s3:*"],
+                    "Resource": [
+                        "arn:aws:s3:::{args['codebuild_functional_bucket']}",
+                        "arn:aws:s3:::{args['codebuild_functional_bucket']}/*",
+                        "arn:aws:s3:::{args['codebuild_main_bucket']}",
+                        "arn:aws:s3:::{args['codebuild_main_bucket']}/*"
+                    ]
                 }}
             ]
         }}
