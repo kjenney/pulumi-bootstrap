@@ -10,13 +10,14 @@ s3 = boto3.resource(
 
 environment = os.environ.get('environment')
 
-def buildspec_functional(environ, branch):
+def buildspec_functional(environ, branch, sha):
     """Create the CodeBuild Job that will be used for Functional Testing"""
     return {'version': '0.2',
             'env': {
                 'secrets-manager': {
                     'GITHUB_TOKEN': f"webhook-github-token-secret-{environ}"
-                }
+                },
+                'commit-sha': sha
             },
             'phases': {
                 'install': {
@@ -36,7 +37,8 @@ def buildspec_functional(environ, branch):
                 'build': {
                     'commands': [
                         'cd pulumi-bootstrap',
-                        'pip install -r requirements.txt'
+                        'pip install -r requirements.txt',
+                        "./check_status.sh"
                     ]
                 }
             }}
@@ -94,7 +96,9 @@ def handler(event, context):
             s3_bucket_functional = os.environ.get('s3_bucket_functional')
             # Branch metadata includes origin and branch - splitting the string to only include the branch
             branch = body['pull_request']['head']['label'].split(':')[1]
-            buildspec = buildspec_functional(environment, branch)
+            # Get the Commit SHA for reporting the status once the build has completed
+            sha = body['pull_request']['head']['sha']
+            buildspec = buildspec_functional(environment, branch, sha)
             content=yaml.dump(buildspec, indent=4, default_flow_style=False)
             s3.Object(s3_bucket_functional, 'buildspec.yml').put(Body=content)
     return {
