@@ -15,7 +15,7 @@ def buildspec_functional(branch):
     return {'version': '0.2',
             'env': {
                 'secrets-manager': {
-                    'GITHUB_TOKEN': "webhook-github-token-secret-{environment}"
+                    'GITHUB_TOKEN': f"webhook-github-token-secret-{environment}"
                 }
             },
             'phases': {
