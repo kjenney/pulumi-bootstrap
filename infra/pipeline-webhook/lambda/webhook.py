@@ -10,12 +10,12 @@ s3 = boto3.resource(
 
 environment = os.environ.get('environment')
 
-def buildspec_functional(environment, branch):
+def buildspec_functional(environ, branch):
     """Create the CodeBuild Job that will be used for Functional Testing"""
     return {'version': '0.2',
             'env': {
                 'secrets-manager': {
-                    'GITHUB_TOKEN': f"webhook-github-token-secret-{environment}"
+                    'GITHUB_TOKEN': f"webhook-github-token-secret-{environ}"
                 }
             },
             'phases': {
@@ -41,12 +41,12 @@ def buildspec_functional(environment, branch):
                 }
             }}
 
-def buildspec_main(environment):
+def buildspec_main(environ):
     """Create the CodeBuild Job that will be used to clone the main branch"""
     return {'version': '0.2',
             'env': {
                 'secrets-manager': {
-                    'GITHUB_TOKEN': f"webhook-github-token-secret-{environment}"
+                    'GITHUB_TOKEN': f"webhook-github-token-secret-{environ}"
                 }
             },
             'phases': {
@@ -68,6 +68,7 @@ def buildspec_main(environment):
                     'commands': [
                         'cd pulumi-bootstrap',
                         'pip install -r requirements.txt'
+                        "pylint $(git ls-files '*.py')"
                     ]
                 }
             }}
@@ -77,6 +78,7 @@ def handler(event, context):
     Check to see if the PR is open
     Write an object to S3 which triggers one of two jobs
     """
+    print("CloudWatch log stream name:", context.log_stream_name)
     body = event['body']
     body = json.loads(body)
     # If the Pull Request is not closed - let's do something

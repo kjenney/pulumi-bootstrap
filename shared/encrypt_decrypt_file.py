@@ -1,14 +1,3 @@
-# snippet-comment:[These are tags for the AWS doc team's sample catalog. Do not remove.]
-# snippet-sourcedescription:[encrypt_decrypt_file.py demonstrates how to encrypt and decrypt a file using the AWS Key Management Service]
-# snippet-service:[kms]
-# snippet-keyword:[AWS Key Management Service (KMS)]
-# snippet-keyword:[Python]
-# snippet-sourcesyntax:[python]
-# snippet-sourcesyntax:[python]
-# snippet-sourcetype:[full-example]
-# snippet-sourcedate:[2019-03-12]
-# snippet-sourceauthor:[AWS]
-
 # Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # This file is licensed under the Apache License, Version 2.0 (the "License").
@@ -20,6 +9,8 @@
 # This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS
 # OF ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
+#
+# NOTICE: Modified from the original to meet PyLint tests
 
 import base64
 import logging
@@ -49,8 +40,8 @@ def retrieve_cmk(desc):
     kms_client = boto3.client('kms')
     try:
         response = kms_client.list_keys()
-    except ClientError as e:
-        logging.error(e)
+    except ClientError as error:
+        logging.error(error)
         return None, None
 
     done = False
@@ -59,8 +50,8 @@ def retrieve_cmk(desc):
             # Get info about the key, including its description
             try:
                 key_info = kms_client.describe_key(KeyId=cmk['KeyArn'])
-            except ClientError as e:
-                logging.error(e)
+            except ClientError as error:
+                logging.error(error)
                 return None, None
 
             # Is this the key we're looking for?
@@ -76,8 +67,8 @@ def retrieve_cmk(desc):
             # Yes, retrieve another batch
             try:
                 response = kms_client.list_keys(Marker=response['NextMarker'])
-            except ClientError as e:
-                logging.error(e)
+            except ClientError as error:
+                logging.error(error)
                 return None, None
 
     # All existing CMKs were checked and the desired key was not found
@@ -102,8 +93,8 @@ def create_cmk(desc='Customer Master Key'):
     kms_client = boto3.client('kms')
     try:
         response = kms_client.create_key(Description=desc)
-    except ClientError as e:
-        logging.error(e)
+    except ClientError as error:
+        logging.error(error)
         return None, None
 
     # Return the key ID and ARN
@@ -130,8 +121,8 @@ def create_data_key(cmk_id, key_spec='AES_256'):
     kms_client = boto3.client('kms')
     try:
         response = kms_client.generate_data_key(KeyId=cmk_id, KeySpec=key_spec)
-    except ClientError as e:
-        logging.error(e)
+    except ClientError as error:
+        logging.error(error)
         return None, None
 
     # Return the encrypted and plaintext data key
@@ -152,8 +143,8 @@ def decrypt_data_key(data_key_encrypted):
     kms_client = boto3.client('kms')
     try:
         response = kms_client.decrypt(CiphertextBlob=data_key_encrypted)
-    except ClientError as e:
-        logging.error(e)
+    except ClientError as error:
+        logging.error(error)
         return None
 
     # Return plaintext base64-encoded binary data key
@@ -186,8 +177,8 @@ def encrypt_file(filename, cmk_id):
     try:
         with open(filename, 'rb') as file:
             file_contents = file.read()
-    except IOError as e:
-        logging.error(e)
+    except IOError as error:
+        logging.error(error)
         return False
 
     # Generate a data key associated with the CMK
@@ -200,8 +191,8 @@ def encrypt_file(filename, cmk_id):
     logging.info('Created new AWS KMS data key')
 
     # Encrypt the file
-    f = Fernet(data_key_plaintext)
-    file_contents_encrypted = f.encrypt(file_contents)
+    plaintext_file = Fernet(data_key_plaintext)
+    file_contents_encrypted = plaintext_file.encrypt(file_contents)
 
     # Write the encrypted data key and encrypted file contents together
     try:
@@ -210,8 +201,8 @@ def encrypt_file(filename, cmk_id):
                                                                   byteorder='big'))
             file_encrypted.write(data_key_encrypted)
             file_encrypted.write(file_contents_encrypted)
-    except IOError as e:
-        logging.error(e)
+    except IOError as error:
+        logging.error(error)
         return False
 
     # For the highest security, the data_key_plaintext value should be wiped
@@ -237,8 +228,8 @@ def decrypt_file(filename):
     try:
         with open(filename + '.encrypted', 'rb') as file:
             file_contents = file.read()
-    except IOError as e:
-        logging.error(e)
+    except IOError as error:
+        logging.error(error)
         return False
 
     # The first NUM_BYTES_FOR_LEN bytes contain the integer length of the
@@ -257,52 +248,18 @@ def decrypt_file(filename):
         return False
 
     # Decrypt the rest of the file
-    f = Fernet(data_key_plaintext)
-    file_contents_decrypted = f.decrypt(file_contents[data_key_encrypted_len:])
+    encrypted_file = Fernet(data_key_plaintext)
+    file_contents_decrypted = encrypted_file.decrypt(file_contents[data_key_encrypted_len:])
 
     # Write the decrypted file contents
     try:
         with open(filename + '.decrypted', 'wb') as file_decrypted:
             file_decrypted.write(file_contents_decrypted)
-    except IOError as e:
-        logging.error(e)
+    except IOError as error:
+        logging.error(error)
         return False
 
     # The same security issue described at the end of encrypt_file() exists
     # here, too, i.e., the wish to wipe the data_key_plaintext value from
     # memory.
     return True
-# snippet-end:[kms.python.decrypt_file]
-
-
-# def main():
-#     # Does the desired CMK already exist?
-#     cmk_id, cmk_arn = retrieve_cmk(cmk_description)
-#     if cmk_id is None:
-#         # No, create it
-#         cmk_id, cmk_arn = create_cmk(cmk_description)
-#         if cmk_id is None:
-#             exit(1)
-#         logging.info('Created new AWS KMS CMK')
-#     else:
-#         logging.info('Retrieved existing AWS KMS CMK')
-
-#     # Use the key to encrypt and decrypt a file
-#     if file_to_encrypt:
-#         # Encrypted file contents are written to <file_to_encrypt>.encrypted
-#         # An encrypted data key is also written to the output file.
-#         # The encrypted file can be decrypted at any time and by any program
-#         # that has the credentials to decrypt the data key.
-#         if encrypt_file(file_to_encrypt, cmk_arn):
-#             logging.info(f'{file_to_encrypt} encrypted to '
-#                          f'{file_to_encrypt}.encrypted')
-
-#             # Decrypt the file
-#             if decrypt_file(file_to_encrypt):
-#                 # Decrypted file contents are written to <file_to_encrypt>.decrypted
-#                 logging.info(f'{file_to_encrypt}.encrypted decrypted to '
-#                              f'{file_to_encrypt}.decrypted')
-
-
-# if __name__ == '__main__':
-#     main()

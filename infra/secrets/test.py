@@ -1,19 +1,16 @@
-import argparse
-import json
-import pulumi
-import pulumi_aws as aws
-from pulumi import automation as auto
 import sys
-import yaml
 import os
+import pulumi
 
 sys.path.append("../../shared")
-from bootstrap import *
+from bootstrap import manage, args
 
-# Test Secrets Infra Deployment
+# Test Secrets Infra
 
 def test():
     """A Test Method to see how PR testing would look"""
-    print('Testing')
+    config = pulumi.Config()
+    environment = config.require('environment')
+    print(environment)
 
 stack = manage(args(), os.path.basename(os.getcwd()), test)

@@ -155,7 +155,10 @@ def manage(arguments, project_name, pulumi_program):
     secrets_provider = f"awskms://alias/{kms_alias_name}"
     backend_url = f"s3://{backend_bucket}"
     environment = arguments.stack_name
-    print(f"Deploying infra: {project_name}")
+    if  arguments.destroy:
+        print(f"Destroying infra: {project_name}")
+    else:
+        print(f"Deploying infra: {project_name}")
 
     project_settings=auto.ProjectSettings(
         name=project_name,
@@ -195,7 +198,6 @@ def manage(arguments, project_name, pulumi_program):
     print("refresh complete")
 
     if arguments.destroy:
-        print("destroying stack...")
         stack.destroy(on_output=print)
         print("stack destroy complete")
         sys.exit()

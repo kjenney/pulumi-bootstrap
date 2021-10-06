@@ -50,6 +50,4 @@ applications:
     cluster:
       - west1
       - east2
-databases:
-  db_name: test
 

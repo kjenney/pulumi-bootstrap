@@ -1,25 +1,21 @@
-import argparse
-import json
-import pulumi
-import pulumi_aws as aws
-from pulumi import automation as auto
 import sys
-import yaml
 import os
+import pulumi
 
 sys.path.append("../../shared")
-from bootstrap import *
+from bootstrap import manage, args, get_config, create_pipeline
 
 # Deploy CodePipeline with CodeBuild projects for each piece of infra
 
 def pulumi_program():
+    """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
     data = get_config(environment)
     infra_projects = data['infra']
     # Get S3 buckets
-    s3_reference = pulumi.StackReference(f"s3-{environment}")
-    iam_reference = pulumi.StackReference(f"iam-{environment}")
+    s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
+    iam_reference = pulumi.StackReference(f"pipeline-iam-{environment}")
     buckets = {}
     roles = {}
     # Set the CodeBuild Project roles and buckets here

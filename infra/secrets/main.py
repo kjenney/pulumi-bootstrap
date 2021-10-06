@@ -1,38 +1,38 @@
-import argparse
-import boto3
+import sys
+import os
 import json
 import logging
 import pulumi
-import pulumi_aws as aws
-from pulumi import automation as auto
-import sys
-import yaml
-import os
 
 sys.path.append("../..//shared")
-from bootstrap import *
-from encrypt_decrypt_file import retrieve_cmk, decrypt_file
+from bootstrap import manage, args
+from encrypt_decrypt_file import decrypt_file
 
-# Decrypting Secrets
+# Decrypting Secrets Infra Deployment
 
-decrypted_file = 'secrets.json'
+DECRYPTED_FILE = 'secrets.json'
+
+
 logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)s: %(asctime)s: %(message)s')
-#cmk_id, cmk_arn = retrieve_cmk('Pulumi State Encrypt Key')
-if decrypt_file(decrypted_file):
-    logging.info(f'{decrypted_file}.encrypted decrypted to '
-             f'{decrypted_file}')
-os.rename(f"{decrypted_file}.decrypted",decrypted_file) 
+if decrypt_file(DECRYPTED_FILE):
+    logging.info("%d.encrypted decrypted to %d", DECRYPTED_FILE)
+os.rename(f"{DECRYPTED_FILE}.decrypted",DECRYPTED_FILE)
 
 # Deploy Secrets to Pulumi State
 
 def pulumi_program():
-    f = open('secrets.json')
-    secrets_dict = json.load(f)
-    for k,v in secrets_dict.items():
-        pulumi.export(k, pulumi.Output.secret(v))
-        #pulumi.export(k,v)
+    """Pulumi Program"""
+    #file = open('secrets.json')
+    try:
+        with open(DECRYPTED_FILE, 'rb') as file:
+            secrets_dict = json.load(file)
+    except IOError as error:
+        logging.error(error)
+        return False
+    for key,value in secrets_dict.items():
+        pulumi.export(key, pulumi.Output.secret(value))
+    return True
 
 stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
-os.remove(decrypted_file)
-
+os.remove(DECRYPTED_FILE)

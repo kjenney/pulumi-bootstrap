@@ -1,25 +1,22 @@
-import argparse
-import json
+import sys
+import os
 import pulumi
 import pulumi_aws as aws
-from pulumi import automation as auto
-import sys
-import yaml
-import os
 
 sys.path.append("../../shared")
-from bootstrap import *
+from bootstrap import manage, args, get_config
 
 # Deploy S3 buckets to support pieces of infra
 
 def pulumi_program():
+    """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
     data = get_config(environment)
     infra_projects = data['infra']
     for project in infra_projects:
         codebuild_bucket = aws.s3.Bucket(
-            f"codeBuildBucket-{project}-{environment}", 
+            f"codeBuildBucket-{project}-{environment}",
             acl="private",
             tags={
                 "Environment": environment,
@@ -36,14 +33,14 @@ def pulumi_program():
     }
 
     codepipeline_bucket = aws.s3.Bucket(
-        f"codePipelineBucket-{environment}", 
+        f"codePipelineBucket-{environment}",
         acl="private",
         tags=ptags
     )
-    pulumi.export(f"codepipeline_bucket_id", codepipeline_bucket.id)
+    pulumi.export("codepipeline_bucket_id", codepipeline_bucket.id)
 
     # Create the S3 Buckets that will be used by the Lambda and CodeBuild
-    codebuild_functional_bucket = aws.s3.Bucket(f"codebuild-functional-{environment}", 
+    codebuild_functional_bucket = aws.s3.Bucket(f"codebuild-functional-{environment}",
         acl="private",
         tags=ptags
     )
@@ -57,5 +54,3 @@ def pulumi_program():
     pulumi.export('codebuild_main_bucket',codebuild_main_bucket.id)
 
 stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
-
-
