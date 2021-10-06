@@ -1,6 +1,7 @@
 GITHUB_TOKEN="$1"
 COMMIT_SHA="$2"
 
+echo $GITHUB_TOKEN
 echo $COMMIT_SHA
 
 pylint $(git ls-files '*.py')
