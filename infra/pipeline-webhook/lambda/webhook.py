@@ -90,7 +90,8 @@ def handler(event, context):
             s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
         else:
             s3_bucket_functional = os.environ.get('s3_bucket_functional')
-            branch = body['pull_request']['head']['label']
+            # Branch metadata includes origin and branch - splitting the string to only include the branch
+            branch = body['pull_request']['head']['label'].split(':')[1]
             buildspec = buildspec_functional(environment, branch)
             content=yaml.dump(buildspec, indent=4, default_flow_style=False)
             s3.Object(s3_bucket_functional, 'buildspec.yml').put(Body=content)
