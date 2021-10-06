@@ -16,8 +16,7 @@ def buildspec_functional(environ, branch, sha):
             'env': {
                 'secrets-manager': {
                     'GITHUB_TOKEN': f"webhook-github-token-secret-{environ}"
-                },
-                'COMMIT_SHA': sha
+                }
             },
             'phases': {
                 'install': {
@@ -38,7 +37,7 @@ def buildspec_functional(environ, branch, sha):
                     'commands': [
                         'cd pulumi-bootstrap',
                         'pip install -r requirements.txt',
-                        "./check_status.sh $GITHUB_TOKEN $COMMIT_SHA"
+                        f"./check_status.sh $GITHUB_TOKEN {sha}"
                     ]
                 }
             }}
