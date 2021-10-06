@@ -1,6 +1,3 @@
-GITUB_TOKEN="test"
-sha="test"
-
 git_state_url="https://${GITUB_TOKEN}:x-oauth-basic@api.github.com/repos/kjenney/pulumi-bootstrap/statuses/${sha}"
 
 pylint $(git ls-files '*.py')
