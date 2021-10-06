@@ -317,7 +317,7 @@ def pulumi_program():
     zip_dir('/tmp/source.zip','./lambda')
 
     # Create the lambda to execute
-    lambda_function = aws.lambda_.Function("lambda-function",
+    lambda_function = aws.lambda_.Function(f"lambda-function-{environment}",
         code=pulumi.FileArchive('/tmp/source.zip'),
         runtime="python3.8",
         role=lambda_role.arn,
