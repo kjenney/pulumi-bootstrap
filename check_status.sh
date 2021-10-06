@@ -1,6 +1,7 @@
 echo "Testing"
-echo $(commit_sha)
+#echo $(commit_sha)
 echo $AWS_REGION
+echo $commit_sha
 
 pylint $(git ls-files '*.py')
 if [ $? -eq 0 ]; then
