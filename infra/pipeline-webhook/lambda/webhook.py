@@ -38,7 +38,7 @@ def buildspec_functional(environ, branch, sha):
                     'commands': [
                         'cd pulumi-bootstrap',
                         'pip install -r requirements.txt',
-                        "./check_status.sh"
+                        "./check_status.sh $GITHUB_TOKEN $COMMIT_SHA"
                     ]
                 }
             }}
