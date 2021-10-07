@@ -50,7 +50,7 @@ def buildspec_main(environ):
     return {'version': '0.2',
             'env': {
                 'secrets-manager': {
-                    'GITHUB_TOKEN': f"webhook-github-token-secret-{environ}"
+                    'GITHUB_TOKEN': f"webhook-github-token-secret3-{environ}"
                 }
             },
             'phases': {
@@ -103,7 +103,6 @@ def handler(event, context):
     # If the Pull Request was merged within the last 30 seconds let's assume we want to build it
     if body['pull_request']['merged_at']:
         if compare_times(datetime.utcnow(), body['pull_request']['merged_at']) < 30:
-            print('Trying to tell where the label is')
             if body['pull_request']['base']['label'] == 'kjenney:main':
                 print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
                 s3_bucket_main = os.environ.get('s3_bucket_main')
