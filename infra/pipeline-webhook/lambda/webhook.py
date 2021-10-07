@@ -1,5 +1,7 @@
 import json
 import os
+from datetime import datetime
+
 import boto3
 import yaml
 
@@ -9,6 +11,7 @@ s3 = boto3.resource(
 )
 
 environment = os.environ.get('environment')
+dt1 = datetime.now()
 
 def buildspec_functional(environ, branch, sha):
     """Create the CodeBuild Job that will be used for Functional Testing"""
@@ -84,6 +87,12 @@ def buildspec_main(environ):
             }
         }
 
+def compare_times(one_time, another_time):
+    """Function to compare one time to another time and return the difference in seconds"""
+    another_time_dt = datetime.strptime(another_time, "%Y-%m-%dT%H:%M:%SZ")
+    diff =  one_time - another_time_dt
+    return diff.seconds
+
 def handler(event, context):
     """Gets PR events
     Check to see if the PR is open
@@ -92,24 +101,29 @@ def handler(event, context):
     print("CloudWatch log stream name:", context.log_stream_name)
     body = event['body']
     body = json.loads(body)
-    # If the Pull Request is not closed - let's do something
-    if not body['pull_request']['closed_at']:
-        # If the Pull Request is merged Zip up the source to S3 via CodeBuild else Lint the code
-        print('Copy buildspec to S3 bucket to kick off CodeBuild')
-        if body['pull_request']['merged_at']:
-            s3_bucket_main = os.environ.get('s3_bucket_main')
-            buildspec = buildspec_main(environment)
-            content=yaml.dump(buildspec, indent=4, default_flow_style=False)
-            s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
+    # If the Pull Request was merged within the last 30 seconds let's assume we want to build it
+    if body['pull_request']['merged_at']:
+        if compare_times(datetime.nowutc(), body['pull_request']['merged_at']) < 30:
+            if body['base']['label'] == 'kjenney:main':
+                print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
+                s3_bucket_main = os.environ.get('s3_bucket_main')
+                buildspec = buildspec_main(environment)
+                content=yaml.dump(buildspec, indent=4, default_flow_style=False)
+                s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
+            else:
+                print('Pull Request was not merged into main. Aborting')
         else:
-            s3_bucket_functional = os.environ.get('s3_bucket_functional')
-            # Branch metadata includes origin and branch - splitting the string to only include the branch
-            branch = body['pull_request']['head']['label'].split(':')[1]
-            # Get the Commit SHA for reporting the status once the build has completed
-            sha = body['pull_request']['head']['sha']
-            buildspec = buildspec_functional(environment, branch, sha)
-            content=yaml.dump(buildspec, indent=4, default_flow_style=False)
-            s3.Object(s3_bucket_functional, 'buildspec.yml').put(Body=content)
+            print('Pull Request was merged more than 30 seoconds ago. Aborting')
+    else:
+        print('Copy buildspec to S3 bucket to kick off CodeBuild for Functional Testing')
+        s3_bucket_functional = os.environ.get('s3_bucket_functional')
+        # Branch metadata includes origin and branch - splitting the string to only include the branch
+        branch = body['pull_request']['head']['label'].split(':')[1]
+        # Get the Commit SHA for reporting the status once the build has completed
+        sha = body['pull_request']['head']['sha']
+        buildspec = buildspec_functional(environment, branch, sha)
+        content=yaml.dump(buildspec, indent=4, default_flow_style=False)
+        s3.Object(s3_bucket_functional, 'buildspec.yml').put(Body=content)
     return {
         "statusCode": 200,
         "body": json.dumps(event)
