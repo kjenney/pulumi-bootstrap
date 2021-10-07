@@ -265,12 +265,6 @@ def pulumi_program():
             image="aws/codebuild/standard:1.0",
             type="LINUX_CONTAINER",
             image_pull_credentials_type="CODEBUILD",
-            # environment_variables=[
-            #     aws.codebuild.ProjectEnvironmentEnvironmentVariableArgs(
-            #         name="GITHUB_TOKEN",
-            #         value=github_token,
-            #     ),
-            # ]
         ),
         logs_config=aws.codebuild.ProjectLogsConfigArgs(
             cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
@@ -290,7 +284,11 @@ def pulumi_program():
         build_timeout=5,
         service_role=codebuild_role.arn,
         artifacts=aws.codebuild.ProjectArtifactsArgs(
-            type="NO_ARTIFACTS",
+            type="S3",
+            location=codebuild_main_bucket,
+            path="/artifact/",
+            name="pulumi-bootstrap",
+            packaging="ZIP"
         ),
         environment=aws.codebuild.ProjectEnvironmentArgs(
             compute_type="BUILD_GENERAL1_SMALL",

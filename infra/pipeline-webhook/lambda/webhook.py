@@ -36,6 +36,7 @@ def buildspec_functional(environ, branch, sha):
                 'build': {
                     'commands': [
                         'cd pulumi-bootstrap',
+                        'pwd',
                         'pip install -r requirements.txt',
                         f"./check_status.sh $GITHUB_TOKEN {sha}"
                     ]
@@ -70,9 +71,19 @@ def buildspec_main(environ):
                         'cd pulumi-bootstrap',
                         'pip install -r requirements.txt'
                         "pylint $(git ls-files '*.py')"
+                        
                     ]
                 }
-            }}
+            },
+            'artifacts': {
+                'files': [
+                    '**/*'
+                ],
+                'name': 'pulumi-bootstrap',
+                'base-directory': './pulumi-bootstrap',
+                'discard-paths': 'yes'
+            }
+        }
 
 def handler(event, context):
     """Gets PR events
