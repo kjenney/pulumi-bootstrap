@@ -52,6 +52,9 @@ def pulumi_program():
 
     codepipeline_source_bucket = aws.s3.Bucket(f"codepipeline-source-{environment}",
         acl="private",
+        versioning=aws.s3.BucketVersioningArgs(
+            enabled=True,
+        ),
         tags=ptags
     )
 

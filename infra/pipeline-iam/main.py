@@ -17,6 +17,10 @@ def pulumi_program():
     infra_projects = data['infra']
     # Get S3 buckets
     s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
+    codepipeline_source_bucket = s3_reference.get_output("codepipeline_source_bucket")
+    # Get KMS Key Arn
+    secrets = pulumi.StackReference(f"secrets-{environment}")
+    kms_arn = secrets.get_output("kms_arn")
     buckets = {}
     for project in infra_projects:
         buckets[f"codebuild_{project}_bucket_id"] = s3_reference.get_output(f"codebuild_{project}_bucket_id")
@@ -42,25 +46,36 @@ def pulumi_program():
 
     aws.iam.RolePolicy("codepipelinePolicy",
         role=codepipeline_role.id,
-        policy=json.dumps({
+        policy=pulumi.Output.all(codepipeline_source_bucket=codepipeline_source_bucket,
+                                 kms_key_arn=kms_arn,
+                                ).apply(lambda args: f"""{{
             "Version": "2012-10-17",
-            "Statement": [{
-                "Effect": "Allow",
-                "Action": [
-                    "codebuild:BatchGetBuilds",
-                    "codebuild:BatchGetProjects",
-                    "codebuild:StartBuild"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Effect": "Allow",
-                "Action": ["kms:*"],
-                "Resource": [
-                    "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"
-                ]
-            }
-            ]}))
+            "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "codebuild:BatchGetBuilds",
+                        "codebuild:BatchGetProjects",
+                        "codebuild:StartBuild"
+                    ],
+                    "Resource": "*"
+                }},
+                {{
+                    "Effect": "Allow",
+                    "Action": ["kms:*"],
+                    "Resource": "{args['kms_key_arn']}"
+                }},
+                {{
+                    "Effect": "Allow",
+                    "Action": ["s3:*"],
+                    "Resource": [
+                        "arn:aws:s3:::{args['codepipeline_source_bucket']}",
+                        "arn:aws:s3:::{args['codepipeline_source_bucket']}/*"
+                    ]
+                }}
+            ]
+        }}
+    """))
 
     # Grant access to every bucket for CodePipeline
     for key, value in buckets.items():
