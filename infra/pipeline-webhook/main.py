@@ -287,7 +287,7 @@ def pulumi_program():
             type="S3",
             location=codebuild_main_bucket,
             path="/artifact/",
-            name="pulumi-bootstrap",
+            name="pulumi-bootstrap.zip",
             packaging="ZIP"
         ),
         environment=aws.codebuild.ProjectEnvironmentArgs(
