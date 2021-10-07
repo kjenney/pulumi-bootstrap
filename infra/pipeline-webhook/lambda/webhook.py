@@ -1,7 +1,6 @@
 import json
 import os
 from datetime import datetime
-
 import boto3
 import yaml
 
@@ -104,14 +103,16 @@ def handler(event, context):
     # If the Pull Request was merged within the last 30 seconds let's assume we want to build it
     if body['pull_request']['merged_at']:
         if compare_times(datetime.utcnow(), body['pull_request']['merged_at']) < 30:
-            if body['base']['label'] == 'kjenney:main':
-                print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
-                s3_bucket_main = os.environ.get('s3_bucket_main')
-                buildspec = buildspec_main(environment)
-                content=yaml.dump(buildspec, indent=4, default_flow_style=False)
-                s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
-            else:
-                print('Pull Request was not merged into main. Aborting')
+            print('Trying to tell where the label is')
+            print(body)
+            # if body['base']['label'] == 'kjenney:main':
+            #     print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
+            #     s3_bucket_main = os.environ.get('s3_bucket_main')
+            #     buildspec = buildspec_main(environment)
+            #     content=yaml.dump(buildspec, indent=4, default_flow_style=False)
+            #     s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
+            # else:
+            #     print('Pull Request was not merged into main. Aborting')
         else:
             print('Pull Request was merged more than 30 seoconds ago. Aborting')
     else:
