@@ -1,8 +1,8 @@
 GITHUB_TOKEN="$1"
 COMMIT_SHA="$2"
 
-echo $GITHUB_TOKEN
-echo $COMMIT_SHA
+echo "TOKEN: $GITHUB_TOKEN"
+echo "SHA: $COMMIT_SHA"
 
 pylint $(git ls-files '*.py')
 if [ $? -eq 0 ]; then
