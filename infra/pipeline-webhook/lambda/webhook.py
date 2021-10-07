@@ -103,7 +103,7 @@ def handler(event, context):
     body = json.loads(body)
     # If the Pull Request was merged within the last 30 seconds let's assume we want to build it
     if body['pull_request']['merged_at']:
-        if compare_times(datetime.nowutc(), body['pull_request']['merged_at']) < 30:
+        if compare_times(datetime.utcnow(), body['pull_request']['merged_at']) < 30:
             if body['base']['label'] == 'kjenney:main':
                 print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
                 s3_bucket_main = os.environ.get('s3_bucket_main')
