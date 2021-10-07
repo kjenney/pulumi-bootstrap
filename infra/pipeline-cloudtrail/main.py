@@ -18,7 +18,7 @@ def pulumi_program():
     codebuild_functional_bucket = s3_stack.get_output("codebuild_functional_bucket")
     codebuild_main_bucket = s3_stack.get_output("codebuild_main_bucket")
     codepipeline_source_bucket = s3_stack.get_output("codepipeline_source_bucket")
-
+    pipeline_s3_trail_bucket = s3_stack.get_output("pipeline_s3_trail_bucket")
     ptags={
         "Environment": environment,
         "Managed By": "Pulumi",
@@ -27,10 +27,9 @@ def pulumi_program():
 
     # Create CloudTrail Trail to track S3 Events
     current = aws.get_caller_identity()
-    pipeline_s3_trail_bucket = aws.s3.Bucket(f"s3trail-{environment}",tags=ptags)
     aws.s3.BucketPolicy("s3_trail_bucket_policy",
-        bucket=pipeline_s3_trail_bucket.id,
-        policy=pulumi.Output.all(pipeline_s3_trail_bucket=pipeline_s3_trail_bucket.id).apply(lambda args: f"""{{
+        bucket=pipeline_s3_trail_bucket,
+        policy=pulumi.Output.all(pipeline_s3_trail_bucket=pipeline_s3_trail_bucket).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
                 {{
@@ -60,7 +59,7 @@ def pulumi_program():
             }}
     """))
     aws.cloudtrail.Trail("pipeline_s3_trail",
-        s3_bucket_name=pipeline_s3_trail_bucket.id,
+        s3_bucket_name=pipeline_s3_trail_bucket,
         event_selectors=[aws.cloudtrail.TrailEventSelectorArgs(
             read_write_type="All",
             include_management_events=True,

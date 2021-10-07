@@ -27,9 +27,7 @@ def pulumi_program():
     buckets["codepipeline_source_bucket"] = s3_reference.get_output("codepipeline_source_bucket")
     buckets["codebuild_functional_bucket"] = s3_reference.get_output("codebuild_functional_bucket")
     buckets["codebuild_main_bucket"] = s3_reference.get_output("codebuild_main_bucket")
-
-    stmt = {'Version': '2012-10-17','Statement': []}
-    stmt['Statement'] = {'Effect': 'Allow', 'Action': ['s3: *'], 'Resource': []}
+    buckets["pipeline_s3_trail_bucket"] = s3_reference.get_output("pipeline_s3_trail_bucket")
 
     # Create the IAM Assume Roles
     codepipeline_role = aws.iam.Role(f"codepipelineRole-{environment}", assume_role_policy="""{
@@ -137,6 +135,13 @@ def pulumi_program():
                             "iam:PutRolePolicy"
                         ],
                         "Resource": ["*"]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "cloudtrail:DescribeTrails"
+                        ],
+                        "Resource": ["*"]                   
                     }}
                     ]
                 }}
