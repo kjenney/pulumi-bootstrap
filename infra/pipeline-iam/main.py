@@ -127,6 +127,16 @@ def pulumi_program():
                             "arn:aws:s3:::{args['bucket']}",
                             "arn:aws:s3:::{args['bucket']}/*"
                         ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "iam:CreateRole",
+                            "iam:UpdateRole",
+                            "iam:DeleteRole",
+                            "iam:PutRolePolicy"
+                        ],
+                        "Resource": ["*"]
                     }}
                     ]
                 }}
