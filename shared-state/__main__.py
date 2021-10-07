@@ -1,32 +1,26 @@
 """Provision resources for S3 state"""
 
-from cryptography.fernet import Fernet
-import json
 import os
+import json
+from cryptography.fernet import Fernet
 import pulumi
 from pulumi_aws import s3, iam, kms
 
-config      = pulumi.Config()
-bucket_name = config.require('bucket_name')
-iam_users   = config.require('iam_users')
-iam_name    = config.require('iam_name')
-iam_data    = config.require_object("iam")
-
-def create_iam_role_policy_document(bucket_name):
+def create_iam_role_policy_document(s3_bucket):
     """
     Create the IAM policy that is attachd to the IAM role granting
     access to the state bucket
     """
 
-    dict = {}
-    dict["Version"] = "2012-10-17"
+    statement_dictionary = {}
+    statement_dictionary["Version"] = "2012-10-17"
     statements = []
     statements.append({"Action":["s3:ListAllMyBuckets"],"Effect":"Allow","Resource":["arn:aws:s3:::*"]})
-    statements.append({"Action":["s3:ListBucket","s3:GetBucketLocation"],"Effect":"Allow","Resource":[f"arn:aws:s3:::{bucket_name}"]})
-    statements.append({"Action":["s3:GetObject","s3:PutObject"],"Effect":"Allow","Resource":[f"arn:aws:s3:::{bucket_name}/*"]})
-    dict["Statement"] = statements
+    statements.append({"Action":["s3:ListBucket","s3:GetBucketLocation"],"Effect":"Allow","Resource":[f"arn:aws:s3:::{s3_bucket}"]})
+    statements.append({"Action":["s3:GetObject","s3:PutObject"],"Effect":"Allow","Resource":[f"arn:aws:s3:::{s3_bucket}/*"]})
+    statement_dictionary["Statement"] = statements
 
-    return json.dumps(dict)
+    return json.dumps(statement_dictionary)
 
 def create_iam_assume_role_policy_document(users):
     """
@@ -34,14 +28,20 @@ def create_iam_assume_role_policy_document(users):
     access to the state bucket
     """
 
-    dict = {}
-    dict["Version"] = "2012-10-17"
+    statement_dictionary = {}
+    statement_dictionary["Version"] = "2012-10-17"
     statements = []
-    for u in users:
-        statements.append({"Effect":"Allow","Principal":{"AWS":f"{u}"},"Action":"sts:AssumeRole"})
-    dict["Statement"] = statements
+    for user in users:
+        statements.append({"Effect":"Allow","Principal":{"AWS":f"{user}"},"Action":"sts:AssumeRole"})
+    statement_dictionary["Statement"] = statements
 
-    return json.dumps(dict)
+    return json.dumps(statement_dictionary)
+
+config      = pulumi.Config()
+bucket_name = config.require('bucket_name')
+iam_users   = config.require('iam_users')
+iam_name    = config.require('iam_name')
+iam_data    = config.require_object("iam")
 
 # Create the S3 bucket for storing Pulumi state
 bucket = s3.Bucket(bucket_name,

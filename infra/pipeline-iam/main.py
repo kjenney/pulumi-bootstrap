@@ -1,24 +1,22 @@
-import argparse
+import sys
+import os
 import json
 import pulumi
 import pulumi_aws as aws
-from pulumi import automation as auto
-import sys
-import yaml
-import os
 
 sys.path.append("../../shared")
-from bootstrap import *
+from bootstrap import manage, args, get_config
 
 # Deploy IAM roles and policies for CodePipeline and CodeBuild projects for each piece of infra
 
 def pulumi_program():
+    """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
     data = get_config(environment)
     infra_projects = data['infra']
     # Get S3 buckets
-    s3_reference = pulumi.StackReference(f"s3-{environment}")
+    s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
     buckets = {}
     for project in infra_projects:
         buckets[f"codebuild_{project}_bucket_id"] = s3_reference.get_output(f"codebuild_{project}_bucket_id")
@@ -42,12 +40,11 @@ def pulumi_program():
         }
     """)
 
-    codepipeline_policy = aws.iam.RolePolicy("codepipelinePolicy",
+    aws.iam.RolePolicy("codepipelinePolicy",
         role=codepipeline_role.id,
-        policy=f"""{{
+        policy=json.dumps({
             "Version": "2012-10-17",
-            "Statement": [
-                {{
+            "Statement": [{
                 "Effect": "Allow",
                 "Action": [
                     "codebuild:BatchGetBuilds",
@@ -55,22 +52,21 @@ def pulumi_program():
                     "codebuild:StartBuild"
                 ],
                 "Resource": "*"
-                }},
-                {{
-                    "Effect": "Allow",
-                    "Action": ["kms:*"],
-                    "Resource": [
-                    "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"                
-                    ]
-                }}
-            ]
-            }}
-            """)
+            },
+            {
+                "Effect": "Allow",
+                "Action": ["kms:*"],
+                "Resource": [
+                    "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"
+                ]
+            }
+            ]}))
+
     # Grant access to every bucket for CodePipeline
-    for key in buckets:
-        codepipeline_role_policy = aws.iam.RolePolicy(f"codepipelinebucketpolicy-{key}",
+    for key, value in buckets.items():
+        aws.iam.RolePolicy(f"codepipelinebucketpolicy-{key}",
             role=codepipeline_role.name,
-            policy=pulumi.Output.all(bucket=buckets[key]).apply(lambda args: f"""{{
+            policy=pulumi.Output.all(bucket=value).apply(lambda args: f"""{{
                 "Version": "2012-10-17",
                 "Statement": [
                 {{
@@ -101,10 +97,10 @@ def pulumi_program():
             """)
         pulumi.export(f"codebuild_role_{project_name}_arn", codebuild_role.arn)
         pulumi.export(f"codebuild_role_{project_name}_id", codebuild_role.id)
-        for key in buckets:
-            codebuild_bucket_policy = aws.iam.RolePolicy(f"codeBuildBucketRolePolicy-{project_name}-{key}-{environment}",
+        for key, value in buckets.items():
+            aws.iam.RolePolicy(f"codeBuildBucketRolePolicy-{project_name}-{key}-{environment}",
                 role=codebuild_role.name,
-                policy=pulumi.Output.all(bucket=buckets[key]).apply(lambda args: f"""{{
+                policy=pulumi.Output.all(bucket=value).apply(lambda args: f"""{{
                     "Version": "2012-10-17",
                     "Statement": [
                     {{
@@ -118,21 +114,20 @@ def pulumi_program():
                     ]
                 }}
                 """))
-        codebuild_role_policy = aws.iam.RolePolicy(f"codeBuildRolePolicy-{project_name}-{environment}",
+        aws.iam.RolePolicy(f"codeBuildRolePolicy-{project_name}-{environment}",
             role=codebuild_role.name,
-            policy=f"""{{
+            policy=json.dumps({
                 "Version": "2012-10-17",
-                "Statement": [
-                {{
+                "Statement": [{
                     "Effect": "Allow",
                     "Resource": ["*"],
                     "Action": [
-                    "logs:CreateLogGroup",
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents"
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
                     ]
-                }},
-                {{
+                },
+                {
                     "Effect": "Allow",
                     "Resource": "*",
                     "Action": [
@@ -145,23 +140,23 @@ def pulumi_program():
                     "ec2:DescribeSecurityGroups",
                     "ec2:DescribeVpcs"
                     ]
-                }},
-                {{
+                },
+                {
                     "Effect": "Allow",
                     "Action": ["s3:*"],
                     "Resource": [
                     "arn:aws:s3:::my-pulumi-state",
                     "arn:aws:s3:::my-pulumi-state/*"
                     ]
-                }},
-                {{
+                },
+                {
                     "Effect": "Allow",
                     "Action": ["kms:*"],
                     "Resource": [
-                    "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"                
+                    "arn:aws:kms:us-east-1:161101091064:key/4ed7e926-9130-4259-a8b4-d2e033d31b5f"
                     ]
-                }},
-                {{
+                },
+                {
                     "Effect": "Allow",
                     "Action": [
                         "iam:ListRolePolicies",
@@ -170,33 +165,33 @@ def pulumi_program():
                         "iam:ListAttachedRolePolicies"
                     ],
                     "Resource": "*"
-                }},
-                {{
+                },
+                {
                     "Effect": "Allow",
                     "Action": [
                         "ec2:*"
                     ],
-                    "Resource": "*"                
-                }},
-                {{
+                    "Resource": "*"
+                },
+                {
                     "Effect": "Allow",
                     "Action": [
                         "codebuild:BatchGetProjects"
                     ],
                     "Resource": "*"
-                }},
-                {{
+                },
+                {
                     "Effect": "Allow",
                     "Action": [
                         "codepipeline:GetPipeline",
                         "codepipeline:ListTagsForResource"
                     ],
                     "Resource": "*"
-                }}
+                }
                 ]
-            }}
-        """)
-    pulumi.export(f"codepipeline_role_arn", codepipeline_role.arn)
-    pulumi.export(f"codepipeline_role_id", codepipeline_role.id)
+            }))
+
+    pulumi.export("codepipeline_role_arn", codepipeline_role.arn)
+    pulumi.export("codepipeline_role_id", codepipeline_role.id)
 
 stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)

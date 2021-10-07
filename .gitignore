@@ -1,2 +1,8 @@
 secrets.json
 venv
+
+# Ignore Lmabda elements - TODO Find a better way of doing this
+_yaml
+yaml
+PyYAML-5.4.1.dist-info
+

@@ -2,9 +2,10 @@
 infra:
   - secrets
   - vpc
-  - pipeline_s3
-  - pipeline_iam
-  - pipeline_webhook
+  - pipeline-s3
+  - pipeline-cloudtrail
+  - pipeline-iam
+  - pipeline-webhook
   - pipeline
 vpc:
   cidr: 10.2.0.0/16
@@ -49,6 +50,4 @@ applications:
     cluster:
       - west1
       - east2
-databases:
-  db_name: test
 

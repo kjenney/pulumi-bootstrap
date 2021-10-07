@@ -5,7 +5,7 @@ import pulumi
 sys.path.append("../../shared")
 from bootstrap import manage, args
 
-# Test Secrets Infra
+# Test Pipeline S3 Infra Deployment
 
 def test():
     """A Test Method to see how PR testing would look"""

@@ -1,21 +1,20 @@
-import managor
-import json
+import sys
 import os
+import json
 import pulumi
 import pulumi_aws as aws
 from mysql.connector import connect
-import sys
 
 sys.path.append("../../shared")
-from bootstrap import *
+from bootstrap import manage, args
 
 def pulumi_program():
+    """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
     secrets = pulumi.StackReference(f"secrets-{environment}")
     vpc = pulumi.StackReference(f"vpc-{environment}")
-    data = managor.get_config(environment)
-    db_name = data['rds']['db_name']
+    db_name = secrets.get_output("db_name")
     db_user = secrets.get_output("db_user")
     db_pass = secrets.get_output("db_pass")
     vpc_id = vpc.get_output("vpc_id")
@@ -56,13 +55,13 @@ def pulumi_program():
                               vpc_security_group_ids=[security_group.id],
                               opts=pulumi.resource.ResourceOptions(additional_secret_outputs=['master_username','master_password']))
 
-    cluster_instance = aws.rds.ClusterInstance("db_instance",
-                                               cluster_identifier=cluster.cluster_identifier,
-                                               instance_class=aws.rds.InstanceType.T3_SMALL,
-                                               engine=aws.rds.EngineType.AURORA_MYSQL,
-                                               engine_version="5.7.mysql_aurora.2.03.2",
-                                               publicly_accessible=True,
-                                               db_subnet_group_name=subnet_group.name)
+    aws.rds.ClusterInstance("db_instance",
+                            cluster_identifier=cluster.cluster_identifier,
+                            instance_class=aws.rds.InstanceType.T3_SMALL,
+                            engine=aws.rds.EngineType.AURORA_MYSQL,
+                            engine_version="5.7.mysql_aurora.2.03.2",
+                            publicly_accessible=True,
+                            db_subnet_group_name=subnet_group.name)
 
     pulumi.export("host", cluster.endpoint)
     pulumi.export("db_name", db_name)
@@ -83,34 +82,33 @@ with connect(
 
     # make sure the table exists
     print("creating table...")
-    create_table_query = """CREATE TABLE IF NOT EXISTS hello_pulumi(
+    CREATE_TABLE_QUERY = """CREATE TABLE IF NOT EXISTS hello_pulumi(
         id int(9) NOT NULL PRIMARY KEY,
         color varchar(14) NOT NULL);
         """
     with connection.cursor() as cursor:
-        cursor.execute(create_table_query)
+        cursor.execute(CREATE_TABLE_QUERY)
         connection.commit()
 
     # seed the table with some data to start
-    seed_table_query = """INSERT IGNORE INTO hello_pulumi (id, color)
+    SEED_TABLE_QUERY = """INSERT IGNORE INTO hello_pulumi (id, color)
     VALUES
         (1, 'Purple'),
         (2, 'Violet'),
         (3, 'Plum');
     """
     with connection.cursor() as cursor:
-        cursor.execute(seed_table_query)
+        cursor.execute(SEED_TABLE_QUERY)
         connection.commit()
 
     print("rows inserted!")
     print("querying to verify data...")
 
     # read the data back
-    read_table_query = """SELECT COUNT(*) FROM hello_pulumi;"""
+    READ_TABLE_QUERY = """SELECT COUNT(*) FROM hello_pulumi;"""
     with connection.cursor() as cursor:
-        cursor.execute(read_table_query)
+        cursor.execute(READ_TABLE_QUERY)
         result = cursor.fetchone()
         print(f"Result: {json.dumps(result)}")
 
     print("database, table and rows successfully configured")
-
