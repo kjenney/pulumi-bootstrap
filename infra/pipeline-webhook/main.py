@@ -199,16 +199,6 @@ def pulumi_program():
         tags=label_tags
     )
 
-    #secret_json = github_token.apply(lambda token: {"token":"token"})
-
-    # secret_json = pulumi.Output.all(github_token=github_token).apply(lambda args: f"""{{   
-    #         "token": "{args['github_token']}"
-    #     }}""")
-
-    # aws.secretsmanager.SecretVersion("webhook-github-token-secret-value",
-    #     secret_id=github_token_secret.id,
-    #     secret_string=json.dumps({"token":"token"}))
-
     aws.secretsmanager.SecretVersion("webhook-github-token-secret-value",
         secret_id=github_token_secret.id,
         secret_string=github_token)
@@ -262,34 +252,6 @@ def pulumi_program():
             ]
         }}
     """))
-
-    # aws.iam.RolePolicy("codebuldPolicy",
-    #     role=codebuild_role.id,
-    #     policy=pulumi.Output.all(codebuild_functional_bucket=codebuild_functional_bucket,codebuild_main_bucket=codebuild_main_bucket).apply(lambda args: f"""{{
-    #         "Version": "2012-10-17",
-    #         "Statement": [
-    #             {{
-    #                 "Effect": "Allow",
-    #                 "Action": [
-    #                     "logs:CreateLogGroup",
-    #                     "logs:CreateLogStream",
-    #                     "logs:PutLogEvents"
-    #                 ],
-    #                 "Resource": ["*"]
-    #             }},
-    #             {{
-    #                 "Effect": "Allow",
-    #                 "Action": ["s3:*"],
-    #                 "Resource": [
-    #                     "arn:aws:s3:::{args['codebuild_functional_bucket']}",
-    #                     "arn:aws:s3:::{args['codebuild_functional_bucket']}/*",
-    #                     "arn:aws:s3:::{args['codebuild_main_bucket']}",
-    #                     "arn:aws:s3:::{args['codebuild_main_bucket']}/*"
-    #                 ]
-    #             }}
-    #         ]
-    #     }}
-    # """))
 
     codebuild_project_functional = aws.codebuild.Project("codebuild-functional-testing",
         description=f"codebuild project for {project_name} in {environment}",
