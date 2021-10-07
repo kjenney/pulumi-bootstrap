@@ -81,8 +81,7 @@ def buildspec_main(environ):
                     '**/*'
                 ],
                 'name': 'pulumi-bootstrap',
-                'base-directory': './pulumi-bootstrap',
-                'discard-paths': 'yes'
+                'base-directory': './pulumi-bootstrap'
             }
         }
 
