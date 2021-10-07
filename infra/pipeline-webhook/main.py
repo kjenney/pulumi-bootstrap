@@ -193,11 +193,11 @@ def pulumi_program():
     github_provider = github.Provider(resource_name='github_provider', token=github_token)
 
     # Create Secrets Manager secret with GitHub Token for the CodeBuild jobs
-    github_token_secret = aws.secretsmanager.Secret("webhook-github-token-secret",
-        name=f"webhook-github-token-secret2-{environment}",
-        description="The GitHub Token for use by CodeBuild projects to test and build source from GitHub code",
-        tags=label_tags
-    )
+    # github_token_secret = aws.secretsmanager.Secret("webhook-github-token-secret",
+    #     name=f"webhook-github-token-secret2-{environment}",
+    #     description="The GitHub Token for use by CodeBuild projects to test and build source from GitHub code",
+    #     tags=label_tags
+    # )
 
     #secret_json = github_token.apply(lambda token: {"token":"token"})
 
@@ -205,9 +205,9 @@ def pulumi_program():
     #         "token": "{args['github_token']}"
     #     }}""")
 
-    aws.secretsmanager.SecretVersion("webhook-github-token-secret-value",
-        secret_id=github_token_secret.id,
-        secret_string=json.dumps({"token":"token"}))
+    # aws.secretsmanager.SecretVersion("webhook-github-token-secret-value",
+    #     secret_id=github_token_secret.id,
+    #     secret_string=json.dumps({"token":"token"}))
 
     # aws.secretsmanager.SecretVersion("webhook-github-token-secret-value",
     #     secret_id=github_token_secret.id,
@@ -228,18 +228,46 @@ def pulumi_program():
         }
     """)
 
+    # aws.iam.RolePolicy("codebuldPolicy",
+    #     role=codebuild_role.id,
+    #     policy=pulumi.Output.all(github_token_secret=github_token_secret.arn,codebuild_functional_bucket=codebuild_functional_bucket,codebuild_main_bucket=codebuild_main_bucket).apply(lambda args: f"""{{
+    #         "Version": "2012-10-17",
+    #         "Statement": [
+    #             {{
+    #                 "Effect": "Allow",
+    #                 "Action": [
+    #                     "secretsmanager:*"
+    #                 ],
+    #                 "Resource": "{args['github_token_secret']}"
+    #             }},
+    #             {{
+    #                 "Effect": "Allow",
+    #                 "Action": [
+    #                     "logs:CreateLogGroup",
+    #                     "logs:CreateLogStream",
+    #                     "logs:PutLogEvents"
+    #                 ],
+    #                 "Resource": ["*"]
+    #             }},
+    #             {{
+    #                 "Effect": "Allow",
+    #                 "Action": ["s3:*"],
+    #                 "Resource": [
+    #                     "arn:aws:s3:::{args['codebuild_functional_bucket']}",
+    #                     "arn:aws:s3:::{args['codebuild_functional_bucket']}/*",
+    #                     "arn:aws:s3:::{args['codebuild_main_bucket']}",
+    #                     "arn:aws:s3:::{args['codebuild_main_bucket']}/*"
+    #                 ]
+    #             }}
+    #         ]
+    #     }}
+    # """))
+
     aws.iam.RolePolicy("codebuldPolicy",
         role=codebuild_role.id,
-        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn,codebuild_functional_bucket=codebuild_functional_bucket,codebuild_main_bucket=codebuild_main_bucket).apply(lambda args: f"""{{
+        policy=pulumi.Output.all(codebuild_functional_bucket=codebuild_functional_bucket,codebuild_main_bucket=codebuild_main_bucket).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
-                {{
-                    "Effect": "Allow",
-                    "Action": [
-                        "secretsmanager:*"
-                    ],
-                    "Resource": "{args['github_token_secret']}"
-                }},
                 {{
                     "Effect": "Allow",
                     "Action": [
@@ -275,6 +303,12 @@ def pulumi_program():
             image="aws/codebuild/standard:1.0",
             type="LINUX_CONTAINER",
             image_pull_credentials_type="CODEBUILD",
+            environment_variables=[
+                aws.codebuild.ProjectEnvironmentEnvironmentVariableArgs(
+                    name="GITHUB_TOKEN",
+                    value=github_token,
+                ),
+            ]
         ),
         logs_config=aws.codebuild.ProjectLogsConfigArgs(
             cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
