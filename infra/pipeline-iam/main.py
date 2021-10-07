@@ -169,6 +169,13 @@ def pulumi_program():
                             "lambda:*"
                         ],
                         "Resource": ["*"]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "codepipeline:*"
+                        ],
+                        "Resource": ["*"]
                     }}
                     ]
                 }}
