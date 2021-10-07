@@ -13,11 +13,6 @@ environment = os.environ.get('environment')
 def buildspec_functional(environ, branch, sha):
     """Create the CodeBuild Job that will be used for Functional Testing"""
     return {'version': '0.2',
-            'env': {
-                'secrets-manager': {
-                    'GITHUB_TOKEN': f"webhook-github-token-secret2-{environ}:token"
-                }
-            },
             'phases': {
                 'install': {
                     'runtime-versions': {
