@@ -154,6 +154,13 @@ def pulumi_program():
                             "events:*"
                         ],
                         "Resource": ["*"]
+                    }},
+                     {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "apigateway:*"
+                        ],
+                        "Resource": ["*"]
                     }}
                     ]
                 }}
