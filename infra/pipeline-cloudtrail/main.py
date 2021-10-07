@@ -17,6 +17,7 @@ def pulumi_program():
     s3_stack = pulumi.StackReference(f"pipeline-s3-{environment}")
     codebuild_functional_bucket = s3_stack.get_output("codebuild_functional_bucket")
     codebuild_main_bucket = s3_stack.get_output("codebuild_main_bucket")
+    codepipeline_source_bucket = s3_stack.get_output("codepipeline_source_bucket")
 
     ptags={
         "Environment": environment,
@@ -65,7 +66,11 @@ def pulumi_program():
             include_management_events=True,
             data_resources=[aws.cloudtrail.TrailEventSelectorDataResourceArgs(
                 type="AWS::S3::Object",
-                values=[codebuild_functional_bucket.apply(lambda id: f"arn:aws:s3:::{id}/buildspec.yml"),codebuild_main_bucket.apply(lambda id: f"arn:aws:s3:::{id}/buildspec.yml")]
+                values=[
+                    codebuild_functional_bucket.apply(lambda id: f"arn:aws:s3:::{id}/buildspec.yml"),
+                    codebuild_main_bucket.apply(lambda id: f"arn:aws:s3:::{id}/buildspec.yml"),
+                    codepipeline_source_bucket.apply(lambda id: f"arn:aws:s3:::{id}/artifact/pulumi-bootstrap.zip")
+                ]
             )],
         )],
         tags=ptags)
