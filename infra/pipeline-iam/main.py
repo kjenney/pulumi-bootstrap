@@ -25,6 +25,8 @@ def pulumi_program():
         buckets[f"codebuild_{project}_bucket_id"] = s3_reference.get_output(f"codebuild_{project}_bucket_id")
     buckets["codepipeline_bucket_id"] = s3_reference.get_output("codepipeline_bucket_id")
     buckets["codepipeline_source_bucket"] = s3_reference.get_output("codepipeline_source_bucket")
+    buckets["codebuild_functional_bucket"] = s3_reference.get_output("codebuild_functional_bucket")
+    buckets["codebuild_main_bucket"] = s3_reference.get_output("codebuild_main_bucket")
 
     stmt = {'Version': '2012-10-17','Statement': []}
     stmt['Statement'] = {'Effect': 'Allow', 'Action': ['s3: *'], 'Resource': []}
