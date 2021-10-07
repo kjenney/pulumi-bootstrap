@@ -161,7 +161,7 @@ def pulumi_program():
                             "apigateway:*"
                         ],
                         "Resource": ["*"]
-                    }},
+                    }}
                     ]
                 }}
                 """))
