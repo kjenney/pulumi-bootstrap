@@ -20,7 +20,6 @@ def pulumi_program():
     codepipeline_source_bucket = s3_reference.get_output("codepipeline_source_bucket")
     # Get KMS Key Arn
     secrets = pulumi.StackReference(f"secrets-{environment}")
-    kms_arn = secrets.get_output("kms_arn")
     buckets = {}
     for project in infra_projects:
         buckets[f"codebuild_{project}_bucket_id"] = s3_reference.get_output(f"codebuild_{project}_bucket_id")
@@ -47,7 +46,7 @@ def pulumi_program():
     aws.iam.RolePolicy("codepipelinePolicy",
         role=codepipeline_role.id,
         policy=pulumi.Output.all(codepipeline_source_bucket=codepipeline_source_bucket,
-                                 kms_key_arn=kms_arn,
+                                 kms_key_arn=secrets.get_output("kms_arn"),
                                 ).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
