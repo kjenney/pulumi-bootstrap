@@ -2,9 +2,9 @@
 infra:
   - secrets
   - vpc
+  - pipeline-iam
   - pipeline-s3
   - pipeline-cloudtrail
-  - pipeline-iam
   - pipeline-webhook
   - pipeline
 vpc:
