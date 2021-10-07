@@ -104,8 +104,10 @@ def handler(event, context):
     if body['pull_request']['merged_at']:
         if compare_times(datetime.utcnow(), body['pull_request']['merged_at']) < 30:
             print('Trying to tell where the label is')
-            print(body)
-            # if body['base']['label'] == 'kjenney:main':
+            if body['pull_request']['base']['label'] == 'kjenney:main':
+                print('Label matches up')
+            else:
+                print('Label does not match up')
             #     print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
             #     s3_bucket_main = os.environ.get('s3_bucket_main')
             #     buildspec = buildspec_main(environment)
