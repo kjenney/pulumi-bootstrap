@@ -138,10 +138,8 @@ def pulumi_program():
                     }},
                     {{
                         "Effect": "Allow",
-                        "Action": [
-                            "cloudtrail:DescribeTrails"
-                        ],
-                        "Resource": ["*"]                   
+                        "Action": ["cloudtrail:*"],
+                        "Resource": ["*"]
                     }}
                     ]
                 }}
