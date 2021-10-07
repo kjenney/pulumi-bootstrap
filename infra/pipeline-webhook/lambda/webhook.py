@@ -92,7 +92,7 @@ def handler(event, context):
     print("CloudWatch log stream name:", context.log_stream_name)
     body = event['body']
     body = json.loads(body)
-    # If the Pull Request is not closed - let's do something
+    # If the Pull Request was merged within the last 30 seconds let's assume we want to build it
     if not body['pull_request']['closed_at']:
         # If the Pull Request is merged Zip up the source to S3 via CodeBuild else Lint the code
         print('Copy buildspec to S3 bucket to kick off CodeBuild')

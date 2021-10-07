@@ -22,7 +22,7 @@ def zip_dir(zip_name: str, source_dir: Union[str, os.PathLike]):
         for file in src_path.rglob('*'):
             zippedfile.write(file, file.relative_to(src_path))
 
-def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucket, label_tags, github_provider):
+def create_lambda_dependencies(environment, codebuild_functional_bucket, codebuild_main_bucket, label_tags, github_provider):
     """Create the Webhook via API Gateway and the Lambda that is triggered by it"""
     data = get_config(environment)
     infra_projects = data['infra']
@@ -69,7 +69,7 @@ def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucke
     # Zip up the code with dependencies
     zip_dir('/tmp/source.zip','./lambda')
 
-    # Create the lambda to execute
+    # Create the lambda to execute on Pull Requestss
     lambda_function = aws.lambda_.Function(f"lambda-function-{environment}",
         code=pulumi.FileArchive('/tmp/source.zip'),
         runtime="python3.8",
