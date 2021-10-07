@@ -71,7 +71,6 @@ def buildspec_main(environ):
                         'cd pulumi-bootstrap',
                         'pip install -r requirements.txt'
                         "pylint $(git ls-files '*.py')"
-                        
                     ]
                 }
             },
