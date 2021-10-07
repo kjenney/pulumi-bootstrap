@@ -70,6 +70,7 @@ def pulumi_program():
                     codebuild_functional_bucket.apply(lambda id: f"arn:aws:s3:::{id}/buildspec.yml"),
                     codebuild_main_bucket.apply(lambda id: f"arn:aws:s3:::{id}/buildspec.yml"),
                     codepipeline_source_bucket.apply(lambda id: f"arn:aws:s3:::{id}/pulumi-bootstrap.zip")
+
                 ]
             )],
         )],
