@@ -12,7 +12,7 @@ phases:
       - pip install -r requirements.txt
   build:
     commands:
-      - cd infra/pipeline
+      - cd infra/rds
       - python main.py -b my-pulumi-state -k pulumi-secret-encryption -s dev
 artifacts: 
   files:
