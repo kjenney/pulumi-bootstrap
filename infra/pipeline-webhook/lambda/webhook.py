@@ -105,16 +105,13 @@ def handler(event, context):
         if compare_times(datetime.utcnow(), body['pull_request']['merged_at']) < 30:
             print('Trying to tell where the label is')
             if body['pull_request']['base']['label'] == 'kjenney:main':
-                print('Label matches up')
+                print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
+                s3_bucket_main = os.environ.get('s3_bucket_main')
+                buildspec = buildspec_main(environment)
+                content=yaml.dump(buildspec, indent=4, default_flow_style=False)
+                s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
             else:
-                print('Label does not match up')
-            #     print('Copy buildspec to S3 bucket to kick off CodeBuild for Main Clone')
-            #     s3_bucket_main = os.environ.get('s3_bucket_main')
-            #     buildspec = buildspec_main(environment)
-            #     content=yaml.dump(buildspec, indent=4, default_flow_style=False)
-            #     s3.Object(s3_bucket_main, 'buildspec.yml').put(Body=content)
-            # else:
-            #     print('Pull Request was not merged into main. Aborting')
+                print('Pull Request was not merged into main. Aborting')
         else:
             print('Pull Request was merged more than 30 seoconds ago. Aborting')
     else:
