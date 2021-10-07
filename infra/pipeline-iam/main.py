@@ -112,6 +112,11 @@ def pulumi_program():
             """)
         pulumi.export(f"codebuild_role_{project_name}_arn", codebuild_role.arn)
         pulumi.export(f"codebuild_role_{project_name}_id", codebuild_role.id)
+
+        # Attach the fullaccess policy to the Lambda role created above
+        aws.iam.RolePolicyAttachment(f"lambdaRoleAttachment-{project_name}-{environment}",
+            role=codebuild_role,
+            policy_arn=aws.iam.ManagedPolicy.AWS_LAMBDA_BASIC_EXECUTION_ROLE)
         for key, value in buckets.items():
             aws.iam.RolePolicy(f"codeBuildBucketRolePolicy-{project_name}-{key}-{environment}",
                 role=codebuild_role.name,
