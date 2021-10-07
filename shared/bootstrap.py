@@ -88,7 +88,7 @@ def create_pipeline(infra_projects, buckets, roles, environment, codepipeline_so
                 version="1",
                 configuration={
                     "S3Bucket": codepipeline_source_bucket,
-                    "S3ObjectKey": "/artifact/pulumi-bootstrap.zip",
+                    "S3ObjectKey": "pulumi-bootstrap.zip",
                     "PollForSourceChanges": False,
                 },
                 output_artifacts=["source_output"],
