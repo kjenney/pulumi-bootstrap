@@ -50,7 +50,13 @@ def pulumi_program():
         tags=ptags
     )
 
+    codepipeline_source_bucket = aws.s3.Bucket(f"codepipeline-source-{environment}",
+        acl="private",
+        tags=ptags
+    )
+
     pulumi.export('codebuild_functional_bucket',codebuild_functional_bucket.id)
     pulumi.export('codebuild_main_bucket',codebuild_main_bucket.id)
+    pulumi.export('codepipeline_source_bucket',codepipeline_source_bucket.id)
 
 stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)

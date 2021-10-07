@@ -69,7 +69,7 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name)
         }
     )
 
-def create_pipeline(infra_projects, buckets, roles, environment):
+def create_pipeline(infra_projects, buckets, roles, environment, codepipeline_source_bucket):
     """Create a CodePipeline from a list of Infrastructure,
     a list of S3 Bucket ID's,
     a list of IAM Role ARN's and ID's,
@@ -86,11 +86,12 @@ def create_pipeline(infra_projects, buckets, roles, environment):
                 owner="AWS",
                 provider="S3",
                 version="1",
-                output_artifacts=["source_output"],
                 configuration={
-                    "FullRepositoryId": "kjenney/pulumi-bootstrap",
-                    "BranchName": "main",
+                    "S3Bucket": codepipeline_source_bucket,
+                    "S3ObjectKey": "/artifact/pulumi-bootstrap.zip",
+                    "PollForSourceChanges": False,
                 },
+                output_artifacts=["source_output"],
             )],
         )
     ]
@@ -131,8 +132,70 @@ def create_pipeline(infra_projects, buckets, roles, environment):
     )
     pulumi.export("codepipeline_arn", codepipeline.arn)
     pulumi.export("codepipeline_id", codepipeline.id)
+    create_cloudwatch_events('codepipeline_source', codepipeline_source_bucket, codepipeline.arn)
     for project_name in infra_projects:
         create_codebuild_pipeline_project(environment, buckets, roles, project_name)
+
+def create_cloudwatch_events(resource_name, bucket, codepipelineprojectarn):
+    """Create CloudWatch Event Rules with Targets
+    Create the IAM Roles to allow Events to Trigger CodePipeline
+    """
+    check_s3_rule = aws.cloudwatch.EventRule(f"check_s3_objects_in_{resource_name}_bucket",
+        description=f"Capture when Lambda uploads buildspec in the {resource_name} bucket",
+        event_pattern=pulumi.Output.all(bucket=bucket).apply(lambda args: f"""{{
+            "source": [
+                "aws.s3"
+            ],
+            "detail-type": [
+                "AWS API Call via CloudTrail"
+            ],
+            "detail": {{
+                "eventSource": [
+                    "s3.amazonaws.com"
+                ],
+                "eventName": [
+                    "PutObject"
+                ],
+                "requestParameters": {{
+                "bucketName": [
+                    "{args['bucket']}"
+                ]
+                }}
+            }}
+        }}"""))
+    trigger_codepipeline_role = aws.iam.Role(f"trigger_codepipeline_role_{resource_name}", assume_role_policy="""{
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "events.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+            }
+        ]
+        }
+    """)
+    aws.iam.RolePolicy(f"trigger_codebuild_functional_policy_{resource_name}",
+        role=trigger_codepipeline_role.id,
+        policy=pulumi.Output.all(codepipelineprojectarn=codepipelineprojectarn).apply(lambda args: f"""{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "codepipeline:StartPipelineExecution"
+                    ],
+                    "Resource": ["{args['codepipelineprojectarn']}"]
+                }}
+            ]
+        }}
+    """))
+    aws.cloudwatch.EventTarget(f"trigger_codebuild_{resource_name}",
+        rule=check_s3_rule.name,
+        arn=codepipelineprojectarn,
+        role_arn=trigger_codepipeline_role.arn
+    )
 
 def args():
     """Handle ArgParsers Arguments"""

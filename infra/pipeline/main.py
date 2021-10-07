@@ -16,6 +16,7 @@ def pulumi_program():
     # Get S3 buckets
     s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
     iam_reference = pulumi.StackReference(f"pipeline-iam-{environment}")
+    codepipeline_source_bucket = s3_reference.get_output("codepipeline_source_bucket")
     buckets = {}
     roles = {}
     # Set the CodeBuild Project roles and buckets here
@@ -27,6 +28,6 @@ def pulumi_program():
     # Set the CodePipeline role
     roles['codepipeline_role_arn'] = iam_reference.get_output("codepipeline_role_arn")
     roles['codepipeline_role_id'] = iam_reference.get_output("codepipeline_role_id")
-    create_pipeline(infra_projects, buckets, roles, environment)
+    create_pipeline(infra_projects, buckets, roles, environment, codepipeline_source_bucket)
 
 stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)

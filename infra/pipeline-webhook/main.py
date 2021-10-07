@@ -111,7 +111,6 @@ def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucke
         events=["pull_request"],
         opts=pulumi.ResourceOptions(provider=github_provider))
 
-
 def create_cloudwatch_events(resource_name, bucket, codebuildprojectarn):
     """Create CloudWatch Event Rules with Targets
     Create the IAM Roles to allow Events to Trigger CodeBuild jobs
@@ -180,6 +179,7 @@ def pulumi_program():
     s3_stack = pulumi.StackReference(f"pipeline-s3-{environment}")
     codebuild_functional_bucket = s3_stack.get_output("codebuild_functional_bucket")
     codebuild_main_bucket = s3_stack.get_output("codebuild_main_bucket")
+    codepipeline_source_bucket = s3_stack.get_output("codepipeline_source_bucket")
 
     label_tags = {
         "Project" : project_name,
@@ -220,7 +220,11 @@ def pulumi_program():
 
     aws.iam.RolePolicy("codebuldPolicy",
         role=codebuild_role.id,
-        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn,codebuild_functional_bucket=codebuild_functional_bucket,codebuild_main_bucket=codebuild_main_bucket).apply(lambda args: f"""{{
+        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn,
+                                codebuild_functional_bucket=codebuild_functional_bucket,
+                                codebuild_main_bucket=codebuild_main_bucket,
+                                codepipeline_source_bucket=codepipeline_source_bucket
+                                ).apply(lambda args: f"""{{
             "Version": "2012-10-17",
             "Statement": [
                 {{
@@ -246,7 +250,9 @@ def pulumi_program():
                         "arn:aws:s3:::{args['codebuild_functional_bucket']}",
                         "arn:aws:s3:::{args['codebuild_functional_bucket']}/*",
                         "arn:aws:s3:::{args['codebuild_main_bucket']}",
-                        "arn:aws:s3:::{args['codebuild_main_bucket']}/*"
+                        "arn:aws:s3:::{args['codebuild_main_bucket']}/*",
+                        "arn:aws:s3:::{args['codepipeline_source_bucket']}",
+                        "arn:aws:s3:::{args['codepipeline_source_bucket']}/*"
                     ]
                 }}
             ]
@@ -285,7 +291,7 @@ def pulumi_program():
         service_role=codebuild_role.arn,
         artifacts=aws.codebuild.ProjectArtifactsArgs(
             type="S3",
-            location=codebuild_main_bucket,
+            location=codepipeline_source_bucket,
             path="/artifact/",
             name="pulumi-bootstrap.zip",
             packaging="ZIP"
