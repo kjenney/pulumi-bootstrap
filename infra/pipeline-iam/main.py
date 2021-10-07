@@ -140,6 +140,20 @@ def pulumi_program():
                         "Effect": "Allow",
                         "Action": ["cloudtrail:*"],
                         "Resource": ["*"]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "secretsmanager:*"
+                        ],
+                        "Resource": ["*"]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "events:*"
+                        ],
+                        "Resource": ["*"]
                     }}
                     ]
                 }}
