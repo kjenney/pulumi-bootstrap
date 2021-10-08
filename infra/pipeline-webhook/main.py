@@ -2,8 +2,6 @@ import sys
 import os
 import json
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
-from typing import Union
 import pulumi
 import pulumi_aws as aws
 import pulumi_github as github
@@ -14,13 +12,6 @@ from bootstrap import manage, args, get_config
 project_name = os.path.basename(os.getcwd())
 
 ### Deploy Lambda to Trigger CodeBuild Projects for testing and triggered CodePipeline on merge
-
-def zip_dir(zip_name: str, source_dir: Union[str, os.PathLike]):
-    """Zip the contents of a directory to the root of a zip file"""
-    src_path = Path(source_dir).expanduser().resolve(strict=True)
-    with ZipFile(zip_name, 'w', ZIP_DEFLATED) as zippedfile:
-        for file in src_path.rglob('*'):
-            zippedfile.write(file, file.relative_to(src_path))
 
 def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucket, label_tags, github_provider):
     """Create the Webhook via API Gateway and the Lambda that is triggered by it"""
@@ -66,17 +57,9 @@ def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucke
         role=lambda_role,
         policy_arn=aws.iam.ManagedPolicy.AWS_LAMBDA_BASIC_EXECUTION_ROLE)
 
-    # Zip up the code with dependencies
-    #zip_dir('/tmp/source.zip','./lambda')
-    #code=pulumi.FileArchive('/tmp/source.zip'),
-    lambda_code = pulumi.FileArchive(f"{Path.cwd()}/lambda")
-    #lambda_code = pulumi.AssetArchive({
-    #    "folder": pulumi.FileArchive(f"{Path.cwd()}/lambda")
-    #})
-
     # Create the lambda to execute
     lambda_function = aws.lambda_.Function(f"lambda-function-{environment}",
-        code=lambda_code,
+        code=pulumi.FileArchive(f"{Path.cwd()}/lambda"),
         runtime="python3.8",
         role=lambda_role.arn,
         handler="webhook.handler",
