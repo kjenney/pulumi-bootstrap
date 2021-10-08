@@ -13,7 +13,7 @@ phases:
   build:
     commands:
       - cd infra/pipeline-webhook
-      - pip install --target ./lambda yaml
+      - pip install --target ./lambda pyyaml
       - python main.py -b my-pulumi-state -k pulumi-secret-encryption -s dev
 artifacts: 
   files:
