@@ -67,11 +67,16 @@ def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucke
         policy_arn=aws.iam.ManagedPolicy.AWS_LAMBDA_BASIC_EXECUTION_ROLE)
 
     # Zip up the code with dependencies
-    zip_dir('/tmp/source.zip','./lambda')
+    #zip_dir('/tmp/source.zip','./lambda')
+    #code=pulumi.FileArchive('/tmp/source.zip'),
+    lambda_code = pulumi.FileArchive(f"{Path.cwd()}/lambda")
+    #lambda_code = pulumi.AssetArchive({
+    #    "folder": pulumi.FileArchive(f"{Path.cwd()}/lambda")
+    #})
 
     # Create the lambda to execute
     lambda_function = aws.lambda_.Function(f"lambda-function-{environment}",
-        code=pulumi.FileArchive('/tmp/source.zip'),
+        code=lambda_code,
         runtime="python3.8",
         role=lambda_role.arn,
         handler="webhook.handler",
