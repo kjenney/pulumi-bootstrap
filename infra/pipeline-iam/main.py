@@ -126,56 +126,6 @@ def pulumi_program():
                             "arn:aws:s3:::{args['bucket']}",
                             "arn:aws:s3:::{args['bucket']}/*"
                         ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "iam:CreateRole",
-                            "iam:UpdateRole",
-                            "iam:DeleteRole",
-                            "iam:PutRolePolicy"
-                        ],
-                        "Resource": ["*"]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": ["cloudtrail:*"],
-                        "Resource": ["*"]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "secretsmanager:*"
-                        ],
-                        "Resource": ["*"]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "events:*"
-                        ],
-                        "Resource": ["*"]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "apigateway:*"
-                        ],
-                        "Resource": ["*"]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "lambda:*"
-                        ],
-                        "Resource": ["*"]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "codepipeline:*"
-                        ],
-                        "Resource": ["*"]
                     }}
                     ]
                 }}
@@ -197,14 +147,14 @@ def pulumi_program():
                     "Effect": "Allow",
                     "Resource": "*",
                     "Action": [
-                    "ec2:CreateNetworkInterface",
-                    "ec2:CreateNetworkInterfacePermission",
-                    "ec2:DescribeDhcpOptions",
-                    "ec2:DescribeNetworkInterfaces",
-                    "ec2:DeleteNetworkInterface",
-                    "ec2:DescribeSubnets",
-                    "ec2:DescribeSecurityGroups",
-                    "ec2:DescribeVpcs"
+                        "ec2:CreateNetworkInterface",
+                        "ec2:CreateNetworkInterfacePermission",
+                        "ec2:DescribeDhcpOptions",
+                        "ec2:DescribeNetworkInterfaces",
+                        "ec2:DeleteNetworkInterface",
+                        "ec2:DescribeSubnets",
+                        "ec2:DescribeSecurityGroups",
+                        "ec2:DescribeVpcs"
                     ]
                 },
                 {
@@ -228,14 +178,11 @@ def pulumi_program():
                         "iam:ListRolePolicies",
                         "iam:GetRole",
                         "iam:GetRolePolicy",
-                        "iam:ListAttachedRolePolicies"
-                    ],
-                    "Resource": "*"
-                },
-                {
-                    "Effect": "Allow",
-                    "Action": [
-                        "ec2:*"
+                        "iam:ListAttachedRolePolicies",
+                        "iam:CreateRole",
+                        "iam:UpdateRole",
+                        "iam:DeleteRole",
+                        "iam:PutRolePolicy"
                     ],
                     "Resource": "*"
                 },
@@ -249,8 +196,13 @@ def pulumi_program():
                 {
                     "Effect": "Allow",
                     "Action": [
-                        "codepipeline:GetPipeline",
-                        "codepipeline:ListTagsForResource"
+                        "events:*",
+                        "secretsmanager:*",
+                        "codepipeline:*",
+                        "lambda:*",
+                        "apigateway:*",
+                        "ec2:*",
+                        "cloudtrail:*"
                     ],
                     "Resource": "*"
                 }
