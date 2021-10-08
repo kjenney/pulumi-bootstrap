@@ -21,15 +21,6 @@ def buildspec_functional(environ, branch, sha):
                 }
             },
             'phases': {
-                'install': {
-                    'runtime-versions': {
-                        'python': '3.x'
-                    },
-                    'commands': [
-                        'curl -fsSL https://get.pulumi.com | sh',
-                        'PATH=$PATH:/root/.pulumi/bin'
-                    ]
-                },
                 'pre_build': {
                     'commands': [
                         f"git clone --branch {branch} https://$GITHUB_TOKEN@github.com/kjenney/pulumi-bootstrap.git"
@@ -38,8 +29,6 @@ def buildspec_functional(environ, branch, sha):
                 'build': {
                     'commands': [
                         'cd pulumi-bootstrap',
-                        'pwd',
-                        'pip install -r requirements.txt',
                         f"./github/check_status.sh $GITHUB_TOKEN {sha}"
                     ]
                 }
