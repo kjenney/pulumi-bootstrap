@@ -46,6 +46,10 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name)
                     name="environment",
                     value=environment,
                 ),
+                aws.codebuild.ProjectEnvironmentEnvironmentVariableArgs(
+                    name="project_name",
+                    value=project_name,
+                ),
             ],
         ),
         logs_config=aws.codebuild.ProjectLogsConfigArgs(
@@ -60,7 +64,7 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name)
         ),
         source=aws.codebuild.ProjectSourceArgs(
             type="CODEPIPELINE",
-            buildspec=f"infra/{project_name}/buildspec.yml"
+            buildspec="buildspec.yml"
         ),
         tags={
             "Name": project_name,

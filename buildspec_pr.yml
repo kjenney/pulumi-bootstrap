@@ -1,0 +1,13 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - cd infra/$project_name
+      - python test.py -b my-pulumi-state -k pulumi-secret-encryption -s $environment
+artifacts: 
+  files:
+    - '**/*'
+  base-directory: .
+  name: pulumi-bootstrap
+  discard-paths: no
