@@ -95,12 +95,6 @@ CodePipeline is used to deploy all of the infrastructure in our environment - in
 
 There are a number of dependencies to deploying CodePipeline with CodeBuild Projects. These dependencies are in their separate stacks. For example `pipeline-iam` is a stack that creates IAM Roles and Policies that allow the CodeBuild projects deploying infrastructure to do what they need to do. 
 
-## Docker
-
-There is a Dockerfile for an image that is published to DockerHub.
-
-This includes Python, Pulumi and all of the Python dependencies in `requirements.txt`.
-
 ## Deploying VPC
 
 * Requires a `/16` CIDR
