@@ -182,7 +182,8 @@ def pulumi_program():
                         "iam:CreateRole",
                         "iam:UpdateRole",
                         "iam:DeleteRole",
-                        "iam:PutRolePolicy"
+                        "iam:PutRolePolicy",
+                        "iam:PassRole"
                     ],
                     "Resource": "*"
                 },
