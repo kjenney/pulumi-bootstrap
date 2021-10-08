@@ -13,7 +13,7 @@ phases:
   build:
     commands:
       - cd infra/rds
-      - python main.py -b my-pulumi-state -k pulumi-secret-encryption -s dev
+      - python main.py -b my-pulumi-state -k pulumi-secret-encryption -s $environment
 artifacts: 
   files:
     - '**/*'
