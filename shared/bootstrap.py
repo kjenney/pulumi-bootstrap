@@ -20,6 +20,8 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name)
     """Create a CodeBuild Pipeline Project whose source is that takes the
     source code after a merge to main
     """
+    ecr_reference = pulumi.StackReference(f"pipeline-ecr-{environment}")
+    codebuild_image = ecr_reference.get_output("codebuild_image")
     codebuild_role_arn = roles[f"codebuild_role_{project_name}_arn"]
     # Use the existing S3 bucket
     codebuild_bucket = buckets[f"codebuild_{project_name}_bucket_id"]
@@ -38,7 +40,7 @@ def create_codebuild_pipeline_project(environment, buckets, roles, project_name)
         ),
         environment=aws.codebuild.ProjectEnvironmentArgs(
             compute_type="BUILD_GENERAL1_SMALL",
-            image="aws/codebuild/standard:1.0",
+            image=codebuild_image,
             type="LINUX_CONTAINER",
             image_pull_credentials_type="CODEBUILD",
             environment_variables=[
