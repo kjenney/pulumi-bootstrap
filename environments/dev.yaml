@@ -7,8 +7,6 @@ infra:
   - pipeline-cloudtrail
   - pipeline-webhook
   - pipeline
-docker:
-  codebuild_image: mastermindg/pulumi-bootstrap
 vpc:
   cidr: 10.2.0.0/16
   subnets:
