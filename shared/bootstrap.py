@@ -16,12 +16,8 @@ from pulumi import automation as auto
 #    * pulumi cli is installed
 #    * stack-name corresponds to an environment (i.e. prod, staging, dev)
 
-def create_codebuild_pipeline_project(environment, buckets, roles, project_name):
-    """Create a CodeBuild Pipeline Project whose source is that takes the
-    source code after a merge to main
-    """
-    ecr_reference = pulumi.StackReference(f"pipeline-ecr-{environment}")
-    codebuild_image = ecr_reference.get_output("codebuild_image")
+def create_codebuild_pipeline_project(environment, buckets, roles, project_name, codebuild_image):
+    """Create a CodeBuild Pipeline Project"""
     codebuild_role_arn = roles[f"codebuild_role_{project_name}_arn"]
     # Use the existing S3 bucket
     codebuild_bucket = buckets[f"codebuild_{project_name}_bucket_id"]
@@ -139,8 +135,10 @@ def create_pipeline(infra_projects, buckets, roles, environment, codepipeline_so
     pulumi.export("codepipeline_arn", codepipeline.arn)
     pulumi.export("codepipeline_id", codepipeline.id)
     create_cloudwatch_events('codepipeline_source', codepipeline_source_bucket, codepipeline.arn)
+    ecr_reference = pulumi.StackReference(f"pipeline-ecr-{environment}")
+    codebuild_image = ecr_reference.get_output("codebuild_image")
     for project_name in infra_projects:
-        create_codebuild_pipeline_project(environment, buckets, roles, project_name)
+        create_codebuild_pipeline_project(environment, buckets, roles, project_name, codebuild_image)
 
 def create_cloudwatch_events(resource_name, bucket, codepipelineprojectarn):
     """Create CloudWatch Event Rules with Targets
