@@ -163,7 +163,8 @@ def create_cloudwatch_events(resource_name, bucket, codebuildprojectarn):
 def create_codebuild_jobs(label_tags, environment, github_token_secret, github_provider):
     """Create the CodeBuild jobs with dependencies"""
     data = get_config(environment)
-    codebuild_image = data['docker']['codebuild_image']
+    ecr_reference = pulumi.StackReference(f"pipeline-ecr-{environment}")
+    codebuild_image = ecr_reference.get_output("codebuild_image")
     s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
     buckets = {}
     buckets["codebuild_functional_bucket"] = s3_reference.get_output("codebuild_functional_bucket")
@@ -239,7 +240,8 @@ def create_codebuild_jobs(label_tags, environment, github_token_secret, github_p
         environment=aws.codebuild.ProjectEnvironmentArgs(
             compute_type="BUILD_GENERAL1_SMALL",
             image=codebuild_image,
-            type="LINUX_CONTAINER"
+            type="LINUX_CONTAINER",
+            image_pull_credentials_type="CODEBUILD"
         ),
         logs_config=aws.codebuild.ProjectLogsConfigArgs(
             cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
