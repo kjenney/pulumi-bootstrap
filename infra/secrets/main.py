@@ -16,7 +16,7 @@ ENCRYPTED_FILE = 'secrets.json.encrypted'
 logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)s: %(asctime)s: %(message)s')
 if decrypt_file(DECRYPTED_FILE):
-    logging.info("%s decrypted to %s", DECRYPTED_FILE, ENCRYPTED_FILE)
+    logging.info("%s decrypted to %s", ENCRYPTED_FILE, DECRYPTED_FILE)
 os.rename(f"{DECRYPTED_FILE}.decrypted",DECRYPTED_FILE)
 
 # Deploy Secrets to Pulumi State
