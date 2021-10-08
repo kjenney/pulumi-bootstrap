@@ -43,15 +43,6 @@ def buildspec_main(environ):
                 }
             },
             'phases': {
-                'install': {
-                    'runtime-versions': {
-                        'python': '3.x'
-                    },
-                    'commands': [
-                        'curl -fsSL https://get.pulumi.com | sh',
-                        'PATH=$PATH:/root/.pulumi/bin'
-                    ]
-                },
                 'pre_build': {
                     'commands': [
                         "git clone https://$(GITHUB_TOKEN)@github.com/kjenney/pulumi-bootstrap.git"
