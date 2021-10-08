@@ -40,7 +40,7 @@ def buildspec_functional(environ, branch, sha):
                         'cd pulumi-bootstrap',
                         'pwd',
                         'pip install -r requirements.txt',
-                        f"./check_status.sh $GITHUB_TOKEN {sha}"
+                        f"./github/check_status.sh $GITHUB_TOKEN {sha}"
                     ]
                 }
             }}
