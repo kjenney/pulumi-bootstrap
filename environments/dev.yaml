@@ -2,6 +2,7 @@
 infra:
   - secrets
   - vpc
+  - pipeline-ecr
   - pipeline-iam
   - pipeline-s3
   - pipeline-cloudtrail
