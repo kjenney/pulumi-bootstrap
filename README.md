@@ -85,10 +85,15 @@ or
 aws-vault exec {{some-profile}} -- pulumi up
 ```
 
+## Secrets
+
+Secrets are in their own stack. See the README.md at `infra/secrets` for more details on how to manage your environment secrets.
+
 ## Deploying CodePipeline
 
-We'll deploy a CodePipeline which will in turn deploy all of the infrastructure we need in our environment - including updating the existing CodePipeline when changes are commited.
+CodePipeline is used to deploy all of the infrastructure in our environment - including updating itself.
 
+There are a number of dependencies to deploying CodePipeline with CodeBuild Projects. These dependencies are in their separate stacks. For example `pipeline-iam` is a stack that creates IAM Roles and Policies that allow the CodeBuild projects deploying infrastructure to do what they need to do. 
 
 ## Deploying VPC
 
