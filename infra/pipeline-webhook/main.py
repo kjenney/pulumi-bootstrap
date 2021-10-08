@@ -162,7 +162,6 @@ def create_cloudwatch_events(resource_name, bucket, codebuildprojectarn):
 
 def create_codebuild_jobs(label_tags, environment, github_token_secret, github_provider):
     """Create the CodeBuild jobs with dependencies"""
-    data = get_config(environment)
     ecr_reference = pulumi.StackReference(f"pipeline-ecr-{environment}")
     codebuild_image = ecr_reference.get_output("codebuild_image")
     s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")

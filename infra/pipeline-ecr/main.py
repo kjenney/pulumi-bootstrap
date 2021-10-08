@@ -10,10 +10,10 @@ sys.path.append("../..//shared")
 from bootstrap import manage, args
 
 # Copy requirements.txt from the root of the repo first - for the Docker image build
-custom_image = "pulumi-bootstrap"
-copyfile('../../requirements.txt', f"{custom_image}/requirements.txt")
+CUSTOM_IMAGE = "pulumi-bootstrap"
+copyfile('../../requirements.txt', f"{CUSTOM_IMAGE}/requirements.txt")
 
-def getRegistryInfo(rid):
+def get_registry_info(rid):
     """Get registry info (creds and endpoint) so we can build/publish to it."""
     creds = aws.ecr.get_credentials(registry_id=rid)
     decoded = base64.b64decode(creds.authorization_token).decode()
@@ -32,7 +32,7 @@ def pulumi_program():
         ))
     pulumi.export("codebuild_image_repo", codebuild_image_repo.id)
 
-    codebuild_policy = aws.ecr.RepositoryPolicy("codebuild_image_repo_policy",
+    aws.ecr.RepositoryPolicy("codebuild_image_repo_policy",
         repository=codebuild_image_repo.name,
         policy="""{
             "Version": "2008-10-17",
@@ -64,12 +64,12 @@ def pulumi_program():
         }""")
 
 
-    registry = codebuild_image_repo.registry_id.apply(getRegistryInfo)
+    registry = codebuild_image_repo.registry_id.apply(get_registry_info)
 
     ## Docker Image Build and Publish
-    codebuild_image = docker.Image(f"{custom_image}-{environment}",
+    codebuild_image = docker.Image(f"{CUSTOM_IMAGE}-{environment}",
                     image_name=codebuild_image_repo.repository_url,
-                    build=docker.DockerBuild(context=f'./{custom_image}'),
+                    build=docker.DockerBuild(context=f'./{CUSTOM_IMAGE}'),
                     registry=registry
                     )
     pulumi.export("codebuild_image", codebuild_image.base_image_name)
