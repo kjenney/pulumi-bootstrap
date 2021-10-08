@@ -13,7 +13,7 @@ project_name = os.path.basename(os.getcwd())
 
 ### Deploy Lambda to Trigger CodeBuild Projects for testing and triggered CodePipeline on merge
 
-def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucket, label_tags, github_provider):
+def create_lambda(environment, buckets, label_tags, github_provider):
     """Create the Webhook via API Gateway and the Lambda that is triggered by it"""
     data = get_config(environment)
     infra_projects = data['infra']
@@ -35,7 +35,7 @@ def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucke
 
     aws.iam.RolePolicy("lambda-policy",
         role=lambda_role.id,
-        policy=pulumi.Output.all(codebuild_functional_bucket=codebuild_functional_bucket,codebuild_main_bucket=codebuild_main_bucket).apply(lambda args: f"""{{
+        policy=pulumi.Output.all(codebuild_functional_bucket=buckets['codebuild_functional_bucket'],codebuild_main_bucket=buckets['codebuild_main_bucket']).apply(lambda args: f"""{{
                     "Version": "2012-10-17",
                     "Statement": [
                     {{
@@ -67,8 +67,8 @@ def create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucke
             variables={
                 "environment": environment,
                 "projects": ','.join(infra_projects),
-                "s3_bucket_functional": codebuild_functional_bucket,
-                "s3_bucket_main": codebuild_main_bucket,
+                "s3_bucket_functional": buckets['codebuild_functional_bucket'],
+                "s3_bucket_main": buckets['codebuild_main_bucket'],
             },
         ))
 
@@ -160,14 +160,141 @@ def create_cloudwatch_events(resource_name, bucket, codebuildprojectarn):
         role_arn=trigger_codebuild_role.arn
     )
 
+def create_codebuild_jobs(label_tags, environment, github_token_secret, github_provider):
+    """Create the CodeBuild jobs with dependencies"""
+    data = get_config(environment)
+    codebuild_image = data['docker']['codebuild_image']
+    s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
+    buckets = {}
+    buckets["codebuild_functional_bucket"] = s3_reference.get_output("codebuild_functional_bucket")
+    buckets["codebuild_main_bucket"] = s3_reference.get_output("codebuild_main_bucket")
+    buckets["codepipeline_source_bucket"] = s3_reference.get_output("codepipeline_source_bucket")
+
+    # Create the IAM Role to give the CodeBuild Jobs access to the github_token_secret
+    codebuild_role = aws.iam.Role("codebuldRole", assume_role_policy="""{
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "codebuild.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+            }
+        ]
+        }
+    """)
+
+    for key, value in buckets.items():
+        aws.iam.RolePolicy(f"codeBuildBucketRolePolicy-{project_name}-{key}-{environment}",
+            role=codebuild_role.name,
+            policy=pulumi.Output.all(bucket=value).apply(lambda args: f"""{{
+                "Version": "2012-10-17",
+                "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": ["s3:*"],
+                    "Resource": [
+                        "arn:aws:s3:::{args['bucket']}",
+                        "arn:aws:s3:::{args['bucket']}/*"
+                    ]
+                }}
+                ]
+            }}
+            """))
+
+
+    aws.iam.RolePolicy("codebuldPolicy",
+        role=codebuild_role.id,
+        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn).apply(lambda args: f"""{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "secretsmanager:*"
+                    ],
+                    "Resource": "{args['github_token_secret']}"
+                }},
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                    ],
+                    "Resource": ["*"]
+                }}
+            ]
+        }}
+    """))
+
+    codebuild_project_functional = aws.codebuild.Project("codebuild-functional-testing",
+        description=f"codebuild project for {project_name} in {environment}",
+        build_timeout=5,
+        service_role=codebuild_role.arn,
+        artifacts=aws.codebuild.ProjectArtifactsArgs(
+            type="NO_ARTIFACTS",
+        ),
+        environment=aws.codebuild.ProjectEnvironmentArgs(
+            compute_type="BUILD_GENERAL1_SMALL",
+            image=codebuild_image,
+            type="LINUX_CONTAINER"
+        ),
+        logs_config=aws.codebuild.ProjectLogsConfigArgs(
+            cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
+                group_name="log-group",
+                stream_name="log-stream",
+            )
+        ),
+        source=aws.codebuild.ProjectSourceArgs(
+            type="S3",
+            location=buckets['codebuild_functional_bucket'].apply(lambda id: f"{id}/")
+        ),
+        tags=label_tags
+    )
+
+    codebuild_project_main = aws.codebuild.Project("codebuild-clone-main",
+        description=f"codebuild project for {project_name} in {environment}",
+        build_timeout=5,
+        service_role=codebuild_role.arn,
+        artifacts=aws.codebuild.ProjectArtifactsArgs(
+            type="S3",
+            location=buckets['codepipeline_source_bucket'],
+            path="/",
+            name="pulumi-bootstrap.zip",
+            packaging="ZIP"
+        ),
+        environment=aws.codebuild.ProjectEnvironmentArgs(
+            compute_type="BUILD_GENERAL1_SMALL",
+            image=codebuild_image,
+            type="LINUX_CONTAINER",
+            image_pull_credentials_type="CODEBUILD",
+        ),
+        logs_config=aws.codebuild.ProjectLogsConfigArgs(
+            cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
+                group_name="log-group",
+                stream_name="log-stream",
+            )
+        ),
+        source=aws.codebuild.ProjectSourceArgs(
+            type="S3",
+            location=buckets['codebuild_main_bucket'].apply(lambda id: f"{id}/")
+        ),
+        tags=label_tags
+    )
+
+    # Create CloudWatch Event Rule to Pick Up S3 Object Upload and Trigger CodeBuild Job
+    create_cloudwatch_events('functional', buckets['codebuild_functional_bucket'], codebuild_project_functional.arn)
+    create_cloudwatch_events('main', buckets['codebuild_main_bucket'], codebuild_project_main.arn)
+
+    # Create the API Gateway, Webhook, Lambda, then register the Webhook on GitHub
+    create_lambda(environment, buckets, label_tags, github_provider)
+
 def pulumi_program():
     """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
-    s3_stack = pulumi.StackReference(f"pipeline-s3-{environment}")
-    codebuild_functional_bucket = s3_stack.get_output("codebuild_functional_bucket")
-    codebuild_main_bucket = s3_stack.get_output("codebuild_main_bucket")
-    codepipeline_source_bucket = s3_stack.get_output("codepipeline_source_bucket")
 
     label_tags = {
         "Project" : project_name,
@@ -191,123 +318,6 @@ def pulumi_program():
         secret_id=github_token_secret.id,
         secret_string=github_token)
 
-    # Create the IAM Role to give the CodeBuild Jobs access to the github_token_secret
-    codebuild_role = aws.iam.Role("codebuldRole", assume_role_policy="""{
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "codebuild.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
-            }
-        ]
-        }
-    """)
-
-    aws.iam.RolePolicy("codebuldPolicy",
-        role=codebuild_role.id,
-        policy=pulumi.Output.all(github_token_secret=github_token_secret.arn,
-                                codebuild_functional_bucket=codebuild_functional_bucket,
-                                codebuild_main_bucket=codebuild_main_bucket,
-                                codepipeline_source_bucket=codepipeline_source_bucket
-                                ).apply(lambda args: f"""{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                    "Effect": "Allow",
-                    "Action": [
-                        "secretsmanager:*"
-                    ],
-                    "Resource": "{args['github_token_secret']}"
-                }},
-                {{
-                    "Effect": "Allow",
-                    "Action": [
-                        "logs:CreateLogGroup",
-                        "logs:CreateLogStream",
-                        "logs:PutLogEvents"
-                    ],
-                    "Resource": ["*"]
-                }},
-                {{
-                    "Effect": "Allow",
-                    "Action": ["s3:*"],
-                    "Resource": [
-                        "arn:aws:s3:::{args['codebuild_functional_bucket']}",
-                        "arn:aws:s3:::{args['codebuild_functional_bucket']}/*",
-                        "arn:aws:s3:::{args['codebuild_main_bucket']}",
-                        "arn:aws:s3:::{args['codebuild_main_bucket']}/*",
-                        "arn:aws:s3:::{args['codepipeline_source_bucket']}",
-                        "arn:aws:s3:::{args['codepipeline_source_bucket']}/*"
-                    ]
-                }}
-            ]
-        }}
-    """))
-
-    codebuild_project_functional = aws.codebuild.Project("codebuild-functional-testing",
-        description=f"codebuild project for {project_name} in {environment}",
-        build_timeout=5,
-        service_role=codebuild_role.arn,
-        artifacts=aws.codebuild.ProjectArtifactsArgs(
-            type="NO_ARTIFACTS",
-        ),
-        environment=aws.codebuild.ProjectEnvironmentArgs(
-            compute_type="BUILD_GENERAL1_SMALL",
-            image="aws/codebuild/standard:1.0",
-            type="LINUX_CONTAINER",
-            image_pull_credentials_type="CODEBUILD",
-        ),
-        logs_config=aws.codebuild.ProjectLogsConfigArgs(
-            cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
-                group_name="log-group",
-                stream_name="log-stream",
-            )
-        ),
-        source=aws.codebuild.ProjectSourceArgs(
-            type="S3",
-            location=codebuild_functional_bucket.apply(lambda id: f"{id}/")
-        ),
-        tags=label_tags
-    )
-
-    codebuild_project_main = aws.codebuild.Project("codebuild-clone-main",
-        description=f"codebuild project for {project_name} in {environment}",
-        build_timeout=5,
-        service_role=codebuild_role.arn,
-        artifacts=aws.codebuild.ProjectArtifactsArgs(
-            type="S3",
-            location=codepipeline_source_bucket,
-            path="/",
-            name="pulumi-bootstrap.zip",
-            packaging="ZIP"
-        ),
-        environment=aws.codebuild.ProjectEnvironmentArgs(
-            compute_type="BUILD_GENERAL1_SMALL",
-            image="aws/codebuild/standard:1.0",
-            type="LINUX_CONTAINER",
-            image_pull_credentials_type="CODEBUILD",
-        ),
-        logs_config=aws.codebuild.ProjectLogsConfigArgs(
-            cloudwatch_logs=aws.codebuild.ProjectLogsConfigCloudwatchLogsArgs(
-                group_name="log-group",
-                stream_name="log-stream",
-            )
-        ),
-        source=aws.codebuild.ProjectSourceArgs(
-            type="S3",
-            location=codebuild_main_bucket.apply(lambda id: f"{id}/")
-        ),
-        tags=label_tags
-    )
-
-    # Create CloudWatch Event Rule to Pick Up S3 Object Upload and Trigger CodeBuild Job
-    create_cloudwatch_events('functional', codebuild_functional_bucket, codebuild_project_functional.arn)
-    create_cloudwatch_events('main', codebuild_main_bucket, codebuild_project_main.arn)
-
-    # Create the API Gateway, Webhook, Lambda, then register the Webhook on GitHub
-    create_lambda(environment, codebuild_functional_bucket, codebuild_main_bucket, label_tags, github_provider)
+    create_codebuild_jobs(label_tags, environment, github_token_secret, github_provider)
 
 stack = manage(args(), project_name, pulumi_program)
