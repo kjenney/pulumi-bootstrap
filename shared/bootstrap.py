@@ -246,8 +246,9 @@ def manage(arguments, project_name, pulumi_program):
 
     # for inline programs, we must manage plugins ourselves
     print("installing plugins...")
-    stack.workspace.install_plugin("aws", "v4.0.0")
-    stack.workspace.install_plugin("github", "v4.0.0")
+    stack.workspace.install_plugin("aws", "v4.20.0")
+    stack.workspace.install_plugin("github", "v4.4.0")
+    stack.workspace.install_plugin("docker", "v3.1.0")
     print("plugins installed")
 
     # set stack configuration from argparse arguments, local environment config and/or secrets
