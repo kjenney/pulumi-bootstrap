@@ -1,13 +1,6 @@
-import sys
-import yaml
 import argparse
-import bootstrap
-import pprint
-import importlib
-
-def dynamic_import(module):
-    """Import module"""
-    return importlib.import_module(module)
+from bootstrap import get_config
+from common import dynamic_import
 
 def deploy(project):
     """Deploy project"""
@@ -24,7 +17,7 @@ environment = args.environment
 if args.project:
     deploy(args.project)
 else:
-    data = bootstrap.get_config(environment, "environments")
+    data = get_config(environment, "environments")
     infra_projects = data['infra']
     for project in infra_projects:
         deploy(args.project)

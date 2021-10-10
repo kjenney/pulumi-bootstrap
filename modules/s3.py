@@ -2,6 +2,7 @@ from pulumi import ComponentResource, ResourceOptions, Output
 import pulumi_aws as aws
 
 class BucketArgs:
+    """S3 Bucket Arguments"""
     def __init__(self,
                 environment=None,
                 project_name=None,
@@ -21,18 +22,21 @@ class Bucket(ComponentResource):
     """
     def __init__(self, name, args=BucketArgs, opts: ResourceOptions = None):
         super().__init__('pkg:index:S3', name, None, opts)
-        name = "{}-{}-{}".format(name, args.project_name, args.environment)
+        #name = "{}-{}-{}".format(name, args.project_name, args.environment)
+        name = f"{name}-{args.project_name}-{args.environment}"
+        tags={
+            "Name": name,
+            "Environment": args.environment,
+            "Project Name": args.project_name,
+            "Managed By": 'Pulumi'
+        }
         bucket = aws.s3.Bucket(name,
             acl=args.acl,
             versioning=aws.s3.BucketVersioningArgs(
                 enabled=args.versioning,
             ),
-            tags={
-                "Name": name,
-                "Environment": args.environment,
-                "Project Name": args.project_name,
-                "Managed By": 'Pulumi'
-            })
+            tags=tags)
+
         assume_role = aws.iam.Role(f"assumeRole-{name}", assume_role_policy=f"""{{
             "Version": "2012-10-17",
             "Statement": [
@@ -44,7 +48,8 @@ class Bucket(ComponentResource):
                 }}
             }}
             ]
-        }}""")
+            }}""",
+            tags=tags)
         aws.iam.RolePolicy(f"bucketPolicy-{name}",
             role=assume_role.name,
             policy=Output.all(bucket=bucket.id).apply(lambda args: f"""{{
