@@ -2,7 +2,6 @@ import sys
 import os
 import pulumi
 
-sys.path.append("../../shared")
 from bootstrap import manage, args, get_config, create_pipeline
 
 # Deploy CodePipeline with CodeBuild projects for each piece of infra
@@ -11,7 +10,7 @@ def pulumi_program():
     """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
-    data = get_config(environment)
+    data = get_config(environment, "environments")
     infra_projects = data['infra']
     # Get S3 buckets
     s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
@@ -30,4 +29,10 @@ def pulumi_program():
     roles['codepipeline_role_id'] = iam_reference.get_output("codepipeline_role_id")
     create_pipeline(infra_projects, buckets, roles, environment, codepipeline_source_bucket)
 
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
+def test():
+    """Test the stack"""
+    print("Run something useful here")
+
+def stacked():
+    """Manage the stack"""
+    manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)

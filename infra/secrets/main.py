@@ -4,25 +4,27 @@ import json
 import logging
 import pulumi
 
-sys.path.append("../..//shared")
 from bootstrap import manage, args
 from encrypt_decrypt_file import decrypt_file
 
+# Deploy Secrets to Pulumi State
 # Decrypting Secrets Infra Deployment
 
-DECRYPTED_FILE = 'secrets.json'
-ENCRYPTED_FILE = 'secrets.json.encrypted'
+CURRENT_DIR = os.path.dirname(__file__)
+DECRYPTED_FILE = f"{CURRENT_DIR}/secrets.json"
+ENCRYPTED_FILE = f"{CURRENT_DIR}/secrets.json.encrypted"
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(levelname)s: %(asctime)s: %(message)s')
-if decrypt_file(DECRYPTED_FILE):
-    logging.info("%s decrypted to %s", ENCRYPTED_FILE, DECRYPTED_FILE)
-os.rename(f"{DECRYPTED_FILE}.decrypted",DECRYPTED_FILE)
-
-# Deploy Secrets to Pulumi State
+def decrypt_secrets():
+    """Decrypting secrets for laoding into stack"""
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(levelname)s: %(asctime)s: %(message)s')
+    if decrypt_file(DECRYPTED_FILE):
+        logging.info("%s decrypted to %s", ENCRYPTED_FILE, DECRYPTED_FILE)
+    os.rename(f"{DECRYPTED_FILE}.decrypted",DECRYPTED_FILE)
 
 def pulumi_program():
     """Pulumi Program"""
+    decrypt_secrets()
     #file = open('secrets.json')
     try:
         with open(DECRYPTED_FILE, 'rb') as file:
@@ -32,7 +34,14 @@ def pulumi_program():
         return False
     for key,value in secrets_dict.items():
         pulumi.export(key, pulumi.Output.secret(value))
+    os.remove(DECRYPTED_FILE)
     return True
 
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
-os.remove(DECRYPTED_FILE)
+def stacked(environment, action='deploy'):
+    """Manage the stack"""
+    manage(os.path.basename(os.path.dirname(__file__)), environment, action, pulumi_program)
+
+
+def test():
+    """Test the stack"""
+    print("Run something useful here")

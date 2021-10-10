@@ -36,7 +36,7 @@ def pulumi_program():
     """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
-    data = get_config(environment)
+    data = get_config(environment, "environments")
     vpc_cidr = data['vpc']['cidr']
     if '/16' in vpc_cidr:
         vpc_name = f"main-{environment}"
@@ -77,5 +77,11 @@ def pulumi_program():
     create_subnets(data, number_of_subnets, vpc, vpc_name, public_route)
     pulumi.export("vpc_id", vpc.id)
 
-# Deploy VPC
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
+def stacked(environment, action='deploy'):
+    """Manage the stack"""
+    manage(os.path.basename(os.path.dirname(__file__)), environment, action, pulumi_program)
+
+def test():
+    """Test the stack"""
+    print("Run something useful here")
+

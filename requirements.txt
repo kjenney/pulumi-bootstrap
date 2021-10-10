@@ -9,3 +9,4 @@ boto3>=1.18.43
 cryptography>=3.4.8
 pylint>=2.11.1
 PyGithub>=1.55
+yq>=2.12.2

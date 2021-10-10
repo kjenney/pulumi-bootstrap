@@ -15,7 +15,7 @@ project_name = os.path.basename(os.getcwd())
 
 def create_lambda(environment, buckets, label_tags, github_provider):
     """Create the Webhook via API Gateway and the Lambda that is triggered by it"""
-    data = get_config(environment)
+    data = get_config(environment, "environments")
     infra_projects = data['infra']
     # Create the role for the Lambda to assume
     lambda_role = aws.iam.Role("lambda-role",
@@ -321,4 +321,11 @@ def pulumi_program():
 
     create_codebuild_jobs(label_tags, environment, github_token_secret, github_provider)
 
-stack = manage(args(), project_name, pulumi_program)
+# Deploy Pipeline Webhook Infra
+def stacked():
+    """Manage the stack"""
+    manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)
+
+def test():
+    """Test the stack"""
+    print("Run something useful here")

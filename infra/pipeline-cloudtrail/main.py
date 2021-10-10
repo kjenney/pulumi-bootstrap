@@ -75,4 +75,11 @@ def pulumi_program():
         )],
         tags=ptags)
 
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
+def test():
+    """Test the stack"""
+    print("Run something useful here")
+
+def stacked():
+    """Manage the stack"""
+    manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)
+

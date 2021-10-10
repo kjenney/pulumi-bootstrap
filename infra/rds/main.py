@@ -68,47 +68,56 @@ def pulumi_program():
     pulumi.export("db_user", db_user)
     pulumi.export("db_pass", db_pass)
 
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
-print(f"db host url: {stack.outputs['host'].value}")
-print(f"db name: {stack.outputs['db_name'].value}")
 
-print("configuring db...")
-with connect(
-        host=stack.outputs['host'].value,
-        user=stack.outputs['db_user'].value,
-        password=stack.outputs['db_pass'].value,
-        database=stack.outputs['db_name'].value) as connection:
-    print("db configured!")
 
-    # make sure the table exists
-    print("creating table...")
-    CREATE_TABLE_QUERY = """CREATE TABLE IF NOT EXISTS hello_pulumi(
-        id int(9) NOT NULL PRIMARY KEY,
-        color varchar(14) NOT NULL);
+# Deploy S3 Infra
+def stacked():
+    """Manage the stack"""
+    stack = manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)
+    print(f"db host url: {stack.outputs['host'].value}")
+    print(f"db name: {stack.outputs['db_name'].value}")
+
+    print("configuring db...")
+    with connect(
+            host=stack.outputs['host'].value,
+            user=stack.outputs['db_user'].value,
+            password=stack.outputs['db_pass'].value,
+            database=stack.outputs['db_name'].value) as connection:
+        print("db configured!")
+
+        # make sure the table exists
+        print("creating table...")
+        CREATE_TABLE_QUERY = """CREATE TABLE IF NOT EXISTS hello_pulumi(
+            id int(9) NOT NULL PRIMARY KEY,
+            color varchar(14) NOT NULL);
+            """
+        with connection.cursor() as cursor:
+            cursor.execute(CREATE_TABLE_QUERY)
+            connection.commit()
+
+        # seed the table with some data to start
+        SEED_TABLE_QUERY = """INSERT IGNORE INTO hello_pulumi (id, color)
+        VALUES
+            (1, 'Purple'),
+            (2, 'Violet'),
+            (3, 'Plum');
         """
-    with connection.cursor() as cursor:
-        cursor.execute(CREATE_TABLE_QUERY)
-        connection.commit()
+        with connection.cursor() as cursor:
+            cursor.execute(SEED_TABLE_QUERY)
+            connection.commit()
 
-    # seed the table with some data to start
-    SEED_TABLE_QUERY = """INSERT IGNORE INTO hello_pulumi (id, color)
-    VALUES
-        (1, 'Purple'),
-        (2, 'Violet'),
-        (3, 'Plum');
-    """
-    with connection.cursor() as cursor:
-        cursor.execute(SEED_TABLE_QUERY)
-        connection.commit()
+        print("rows inserted!")
+        print("querying to verify data...")
 
-    print("rows inserted!")
-    print("querying to verify data...")
+        # read the data back
+        READ_TABLE_QUERY = """SELECT COUNT(*) FROM hello_pulumi;"""
+        with connection.cursor() as cursor:
+            cursor.execute(READ_TABLE_QUERY)
+            result = cursor.fetchone()
+            print(f"Result: {json.dumps(result)}")
 
-    # read the data back
-    READ_TABLE_QUERY = """SELECT COUNT(*) FROM hello_pulumi;"""
-    with connection.cursor() as cursor:
-        cursor.execute(READ_TABLE_QUERY)
-        result = cursor.fetchone()
-        print(f"Result: {json.dumps(result)}")
+        print("database, table and rows successfully configured")
 
-    print("database, table and rows successfully configured")
+def test():
+    """Test the stack"""
+    print("Run something useful here")

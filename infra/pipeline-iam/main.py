@@ -4,8 +4,7 @@ import json
 import pulumi
 import pulumi_aws as aws
 
-sys.path.append("../../shared")
-from bootstrap import manage, args, get_config
+from bootstrap import manage, get_config
 
 # Deploy IAM roles and policies for CodePipeline and CodeBuild projects for each piece of infra
 
@@ -13,7 +12,7 @@ def pulumi_program():
     """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
-    data = get_config(environment)
+    data = get_config(environment, "environments")
     infra_projects = data['infra']
     # Get S3 buckets
     s3_reference = pulumi.StackReference(f"pipeline-s3-{environment}")
@@ -213,4 +212,13 @@ def pulumi_program():
     pulumi.export("codepipeline_role_arn", codepipeline_role.arn)
     pulumi.export("codepipeline_role_id", codepipeline_role.id)
 
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
+def stacked(environment, action='deploy'):
+    """Manage the stack"""
+    manage(os.path.basename(os.path.dirname(__file__)), environment, action, pulumi_program)
+
+def test():
+    """Test the stack"""
+    print("Run something useful here")
+
+if __name__ == '__main__':
+    stacked()

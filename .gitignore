@@ -1,8 +1,11 @@
 secrets.json
 venv
+__pycache__
 
 # Ignore Lmabda elements - TODO Find a better way of doing this
 _yaml
 yaml
 PyYAML-5.4.1.dist-info
 
+# Ignore Dockerfile dependencies - TODO Find a better way of doing this
+docker

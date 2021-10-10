@@ -1,17 +1,23 @@
 import sys
 import os
 import base64
-from shutil import copyfile
+import shutil
 import pulumi
 import pulumi_aws as aws
 import pulumi_docker as docker
 
-sys.path.append("../..//shared")
 from bootstrap import manage, args
 
-# Copy requirements.txt from the root of the repo first - for the Docker image build
-CUSTOM_IMAGE = "pulumi-bootstrap"
-copyfile('../../requirements.txt', f"{CUSTOM_IMAGE}/requirements.txt")
+DOCKER_CONTEXT = "docker"
+
+def create_docker_context():
+    """Copy requirements.txt and Dockerfile from the root of the repo first
+    for the Docker image build
+    """
+    os.mkdir(DOCKER_CONTEXT)
+    #shutil.copyfile('../../requirements.txt', f"{DOCKER_CONTEXT}/requirements.txt")
+    shutil.copyfile('requirements.txt', f"{DOCKER_CONTEXT}/requirements.txt")
+    shutil.copyfile('Dockerfile', f"{DOCKER_CONTEXT}/Dockerfile")
 
 def get_registry_info(rid):
     """Get registry info (creds and endpoint) so we can build/publish to it."""
@@ -67,12 +73,29 @@ def pulumi_program():
     registry = codebuild_image_repo.registry_id.apply(get_registry_info)
 
     ## Docker Image Build and Publish
-    codebuild_image = docker.Image(f"{CUSTOM_IMAGE}-{environment}",
+    codebuild_image = docker.Image('bootstrap-image',
                     image_name=codebuild_image_repo.repository_url,
-                    build=docker.DockerBuild(context=f'./{CUSTOM_IMAGE}'),
+                    build=docker.DockerBuild(context=f'./{DOCKER_CONTEXT}'),
                     registry=registry
                     )
     pulumi.export("codebuild_image", codebuild_image.base_image_name)
 
+def cleanup_docker_context():
+    """Remove the docker context folder"""
+    shutil.rmtree(DOCKER_CONTEXT)
+
 # Deploy ECR Repo with Docker Image
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
+def stacked():
+    """Manage the stack"""
+    create_docker_context()
+    manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)
+    cleanup_docker_context()
+
+def test():
+    """Test the stack"""
+    print("Run something useful here")
+
+if __name__ == '__main__':
+    stacked()
+    
+

@@ -16,6 +16,10 @@ from pulumi import automation as auto
 #    * pulumi cli is installed
 #    * stack-name corresponds to an environment (i.e. prod, staging, dev)
 
+STATE_BUCKET = os.getenv('STATE_BUCKET')
+KMS_KEY = os.getenv('KMS_KEY')
+AWS_REGION = os.getenv('AWS_REGION')
+
 def create_codebuild_pipeline_project(environment, buckets, roles, project_name, codebuild_image):
     """Create a CodeBuild Pipeline Project"""
     codebuild_role_arn = roles[f"codebuild_role_{project_name}_arn"]
@@ -206,23 +210,22 @@ def args():
     parser = argparse.ArgumentParser(description='Manage a Pulumi automation stack.')
     parser.add_argument('-n', '--project-name', required=False, default='test')
     parser.add_argument('-a', '--aws-region', required=False, default='us-east-1')
-    parser.add_argument('-b', '--backend-bucket', required=True)
+    parser.add_argument('-b', '--backend-bucket', required=False)
     parser.add_argument('-s', '--stack-name', required=False, default='dev')
-    parser.add_argument('-k', '--kms-alias-name', required=True)
+    parser.add_argument('-k', '--kms-alias-name', required=False)
     parser.add_argument('-d', '--destroy', help='destroy the stack',
                         action='store_true')
     return parser.parse_args()
 
-def manage(arguments, project_name, pulumi_program):
+def manage(project_name, environment, action, pulumi_program):
     """Pulumi up"""
-    backend_bucket = arguments.backend_bucket
-    aws_region = arguments.aws_region
-    kms_alias_name = arguments.kms_alias_name
-    stack_name = f"{project_name}-{arguments.stack_name}"
+    backend_bucket = STATE_BUCKET #arguments.backend_bucket
+    aws_region = AWS_REGION #arguments.aws_region
+    kms_alias_name = KMS_KEY #arguments.kms_alias_name
+    stack_name = f"{project_name}-{environment}"
     secrets_provider = f"awskms://alias/{kms_alias_name}"
     backend_url = f"s3://{backend_bucket}"
-    environment = arguments.stack_name
-    if  arguments.destroy:
+    if action == 'destroy':
         print(f"Destroying infra: {project_name}")
     else:
         print(f"Deploying infra: {project_name}")
@@ -255,17 +258,18 @@ def manage(arguments, project_name, pulumi_program):
     stack.workspace.install_plugin("docker", "v3.1.0")
     print("plugins installed")
 
-    # set stack configuration from argparse arguments, local environment config and/or secrets
+    # set stack configuration environment config and/or secrets
     print("setting up config")
     stack.set_config("aws_region", auto.ConfigValue(value=aws_region))
     stack.set_config("environment", auto.ConfigValue(value=environment))
+    stack.set_config("project_name", auto.ConfigValue(value=project_name))
     print("config set")
 
     print("refreshing stack...")
     stack.refresh(on_output=print)
     print("refresh complete")
 
-    if arguments.destroy:
+    if action == 'destroy':
         stack.destroy(on_output=print)
         print("stack destroy complete")
         sys.exit()
@@ -275,10 +279,10 @@ def manage(arguments, project_name, pulumi_program):
     print(f"update summary: \n{json.dumps(up_res.summary.resource_changes, indent=4)}")
     return up_res
 
-def get_config(environment):
+def get_config(environment, path="../../environments"):
     """Load YAML Config for Processing"""
-    if os.path.exists(f"../../environments/{environment}.yaml"):
-        with open(f"../../environments/{environment}.yaml", mode="r", encoding="utf-8") as stream:
+    if os.path.exists(f"{path}/{environment}.yaml"):
+        with open(f"{path}/{environment}.yaml", mode="r", encoding="utf-8") as stream:
             try:
                 return yaml.safe_load(stream)
             except yaml.YAMLError as exc:

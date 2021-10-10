@@ -12,7 +12,7 @@ def pulumi_program():
     """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
-    data = get_config(environment)
+    data = get_config(environment, "environments")
     infra_projects = data['infra']
     for project in infra_projects:
         codebuild_bucket = aws.s3.Bucket(
@@ -68,4 +68,11 @@ def pulumi_program():
     pulumi.export('codepipeline_source_bucket',codepipeline_source_bucket.id)
     pulumi.export('pipeline_s3_trail_bucket',pipeline_s3_trail_bucket.id)
 
-stack = manage(args(), os.path.basename(os.getcwd()), pulumi_program)
+# Deploy S3 Infra
+def stacked():
+    """Manage the stack"""
+    manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)
+
+def test():
+    """Test the stack"""
+    print("Run something useful here")
