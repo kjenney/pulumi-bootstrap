@@ -6,7 +6,7 @@ import pulumi
 import pulumi_aws as aws
 import pulumi_docker as docker
 
-from bootstrap import manage, args
+from common import manage
 
 DOCKER_CONTEXT = "docker"
 
@@ -85,17 +85,12 @@ def cleanup_docker_context():
     shutil.rmtree(DOCKER_CONTEXT)
 
 # Deploy ECR Repo with Docker Image
-def stacked():
+def stacked(environment, action='deploy'):
     """Manage the stack"""
     create_docker_context()
-    manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)
+    manage(os.path.basename(os.path.dirname(__file__)), environment, action, pulumi_program)
     cleanup_docker_context()
 
 def test():
     """Test the stack"""
     print("Run something useful here")
-
-if __name__ == '__main__':
-    stacked()
-    
-

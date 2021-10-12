@@ -1,21 +1,17 @@
 from pulumi import ComponentResource, ResourceOptions, Output
 import pulumi_aws as aws
-from pulumi_aws import codebuild
+from s3 import Bucket, BucketArgs
 
 class CodeBuildProjectArgs:
     """CodeBuild Project Arguments"""
     def __init__(self,
                 environment=None,
                 project_name=None,
-                assumed_role_id=None,
-                assumed_role_arn=None,
                 codebuild_image=None,
                 bucket=None
                 ):
         self.environment = environment
         self.project_name = project_name
-        self.assumed_role_id = assumed_role_id
-        self.assumed_role_arn = assumed_role_arn
         self.codebuild_image = codebuild_image
         self.bucket = bucket
     
@@ -26,17 +22,35 @@ class CodeBuildProject(ComponentResource):
     def __init__(self, name, args=CodeBuildProjectArgs, opts: ResourceOptions = None):
         super().__init__('pkg:index:CodeBuild', name, None, opts)
         name = f"{name}-{args.project_name}-{args.environment}"
+        assumed_role = aws.iam.Role(f"assumeRole-{args.project_name}", assume_role_policy=f"""{{
+        "Version": "2012-10-17",
+        "Statement": [
+        {{
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Principal": {{
+                "Service": "codebuild.amazonaws.com"
+            }}
+        }}
+        ]
+        }}""")
+        bucket = Bucket('test',
+            BucketArgs(
+                environment=args.environment,
+                project_name=args.project_name,
+                assumed_role=assumed_role.id
+            ))
         codebuild = aws.codebuild.Project(f"{args.project_name}-{args.environment}",
             name=f"{args.project_name}-{args.environment}",
             description=f"codebuild project for {args.project_name} in {args.environment}",
             build_timeout=5,
-            service_role=args.assumed_role_arn,
+            service_role=assumed_role,
             artifacts=aws.codebuild.ProjectArtifactsArgs(
                 type="CODEPIPELINE",
             ),
             cache=aws.codebuild.ProjectCacheArgs(
                 type="S3",
-                location=args.bucket,
+                location=bucket.id,
             ),
             environment=aws.codebuild.ProjectEnvironmentArgs(
                 compute_type="BUILD_GENERAL1_SMALL",

@@ -1,6 +1,7 @@
 import importlib
 import os
 import json
+import yaml
 import pulumi
 from pulumi import automation as auto
 

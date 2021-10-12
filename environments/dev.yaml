@@ -1,14 +1,15 @@
 ---
 infra:
-  - testing
+  - pipeline-ecr
   - secrets
   - vpc
-  - pipeline-ecr
-  - pipeline-iam
-  - pipeline-s3
-  - pipeline-cloudtrail
   - pipeline-webhook
   - pipeline
+  # - pipeline-iam
+  # - pipeline-s3
+  # - pipeline-cloudtrail
+  # - pipeline-webhook
+  # - pipeline
 vpc:
   cidr: 10.2.0.0/16
   subnets:

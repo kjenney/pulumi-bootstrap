@@ -11,8 +11,8 @@ def pulumi_program():
     config = pulumi.Config()
     environment = config.require('environment')
     project_name = pulumi.get_project()
-    ecr_reference = pulumi.StackReference(f"pipeline-ecr-{environment}")
-    codebuild_image = ecr_reference.get_output("codebuild_image")
+    #ecr_reference = pulumi.StackReference(f"pipeline-ecr-{environment}")
+    codebuild_image = 'test'
     AutoTag(environment)
     # CodeBuild Assume Role
     assumed_role = aws.iam.Role(f"assumeRole-{project_name}", assume_role_policy=f"""{{

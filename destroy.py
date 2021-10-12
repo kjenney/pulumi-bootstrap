@@ -1,6 +1,5 @@
 import argparse
-from bootstrap import get_config
-from common import dynamic_import
+from common import dynamic_import, get_config
 
 def destroy(project):
     """Destroy project"""
@@ -18,6 +17,10 @@ if args.project:
     destroy(args.project)
 else:
     data = get_config(environment, "environments")
-    infra_projects = data['infra']
-    for project in infra_projects:
-        destroy(args.project)
+    if data:
+        infra_projects = data['infra']
+        for project in infra_projects:
+            destroy(args.project)
+    else:
+        print(f"ERROR: Invalid environment {environment}")
+        exit(1)

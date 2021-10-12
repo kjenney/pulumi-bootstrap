@@ -3,8 +3,8 @@ import os
 import json
 import logging
 import pulumi
-
-from bootstrap import manage, args
+from codebuild import CodeBuildProject, CodeBuildProjectArgs
+from common import AutoTag, manage
 from encrypt_decrypt_file import decrypt_file
 
 # Deploy Secrets to Pulumi State
@@ -24,8 +24,18 @@ def decrypt_secrets():
 
 def pulumi_program():
     """Pulumi Program"""
+    config = pulumi.Config()
+    environment = config.require('environment')
+    project_name = pulumi.get_project()
+    AutoTag(environment)
+    codebuild_project = CodeBuildProject('test',
+        CodeBuildProjectArgs(
+            environment=environment,
+            project_name=project_name,
+            codebuild_image=codebuild_image,
+        ))
     decrypt_secrets()
-    #file = open('secrets.json')
+    pulumi.export("codebuild_project_id", codebuild_project.bucket_id)
     try:
         with open(DECRYPTED_FILE, 'rb') as file:
             secrets_dict = json.load(file)
@@ -40,7 +50,6 @@ def pulumi_program():
 def stacked(environment, action='deploy'):
     """Manage the stack"""
     manage(os.path.basename(os.path.dirname(__file__)), environment, action, pulumi_program)
-
 
 def test():
     """Test the stack"""

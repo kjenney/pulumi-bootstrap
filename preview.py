@@ -17,6 +17,10 @@ if args.project:
     preview(args.project)
 else:
     data = get_config(environment, "environments")
-    infra_projects = data['infra']
-    for project in infra_projects:
-        preview(args.project)
+    if data:
+        infra_projects = data['infra']
+        for project in infra_projects:
+            preview(args.project)
+    else:
+        print(f"ERROR: Invalid environment {environment}")
+        exit(1)
