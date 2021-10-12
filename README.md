@@ -17,6 +17,7 @@ Because we always expect our Infrastructure and Secrets will get out of control.
 * Docker
 * aws-vault
 * S3 Bucket and KMS Key for Pulumi State (see s3-state folder)
+* Add the S3 Bucket and KMS Key alias to .env
 
 ```
 docker build -t bootstrap .

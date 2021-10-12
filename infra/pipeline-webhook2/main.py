@@ -5,10 +5,9 @@ from pathlib import Path
 import pulumi
 import pulumi_aws as aws
 import pulumi_github as github
-from secretsmanager import Secret, SecretArgs
 
 sys.path.append("../../shared")
-from common import manage, get_config
+from bootstrap import manage, args, get_config
 
 project_name = os.path.basename(os.getcwd())
 
@@ -297,44 +296,35 @@ def pulumi_program():
     """Pulumi Program"""
     config = pulumi.Config()
     environment = config.require('environment')
-    AutoTag(environment) # Autotag every taggable resource
+
+    label_tags = {
+        "Project" : project_name,
+        "ManagedBy"  : 'Pulumi',
+        "Environment": environment,
+    }
+
     # Export GitHub Token to provision the Webhook
     secrets = pulumi.StackReference(f"secrets-{environment}")
     github_token = secrets.get_output("github_token")
     github_provider = github.Provider(resource_name='github_provider', token=github_token)
 
-    assumed_role = aws.iam.Role(f"assumeRole-{project_name}", assume_role_policy=f"""{{
-        "Version": "2012-10-17",
-        "Statement": [
-        {{
-            "Effect": "Allow",
-            "Action": "sts:AssumeRole",
-            "Principal": {{
-                "Service": "codebuild.amazonaws.com"
-            }}
-        }}
-        ]
-        }}""")
-
     # Create Secrets Manager secret with GitHub Token for the CodeBuild jobs
-    github_token_secret = Secret('github_token_secret',
-        SecretArgs(
-            description="The GitHub Token for use by CodeBuild projects to test and build source from GitHub code",
-            environment=environment,
-            project_name=project_name,
-            assumed_role=assumed_role.id
-        ))
+    github_token_secret = aws.secretsmanager.Secret("webhook-github-token-secret",
+        name=f"webhook-github-token-secret3-{environment}",
+        description="The GitHub Token for use by CodeBuild projects to test and build source from GitHub code",
+        tags=label_tags
+    )
 
     aws.secretsmanager.SecretVersion("webhook-github-token-secret-value",
         secret_id=github_token_secret.id,
         secret_string=github_token)
 
-    create_codebuild_jobs(environment, github_token_secret, github_provider)
+    create_codebuild_jobs(label_tags, environment, github_token_secret, github_provider)
 
 # Deploy Pipeline Webhook Infra
-def stacked(environment, action='deploy'):
+def stacked():
     """Manage the stack"""
-    manage(os.path.basename(os.path.dirname(__file__)), environment, action, pulumi_program)
+    manage(args(), os.path.basename(os.path.dirname(__file__)), pulumi_program)
 
 def test():
     """Test the stack"""
