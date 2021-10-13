@@ -8,12 +8,14 @@ class CodeBuildProjectArgs:
                 environment=None,
                 project_name=None,
                 codebuild_image=None,
-                bucket=None
+                assumed_role_id=None,
+                assumed_role_arn=None
                 ):
         self.environment = environment
         self.project_name = project_name
         self.codebuild_image = codebuild_image
-        self.bucket = bucket
+        self.assumed_role_id = assumed_role_id
+        self.assumed_role_arn = assumed_role_arn
     
 class CodeBuildProject(ComponentResource):
     """
@@ -22,35 +24,41 @@ class CodeBuildProject(ComponentResource):
     def __init__(self, name, args=CodeBuildProjectArgs, opts: ResourceOptions = None):
         super().__init__('pkg:index:CodeBuild', name, None, opts)
         name = f"{name}-{args.project_name}-{args.environment}"
-        assumed_role = aws.iam.Role(f"assumeRole-{args.project_name}", assume_role_policy=f"""{{
-        "Version": "2012-10-17",
-        "Statement": [
-        {{
-            "Effect": "Allow",
-            "Action": "sts:AssumeRole",
-            "Principal": {{
-                "Service": "codebuild.amazonaws.com"
-            }}
-        }}
-        ]
-        }}""")
+        if not args.assumed_role_id:
+            assumed_role = aws.iam.Role(f"assumeRole-{args.project_name}", assume_role_policy=f"""{{
+                "Version": "2012-10-17",
+                "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": "sts:AssumeRole",
+                    "Principal": {{
+                        "Service": "codebuild.amazonaws.com"
+                    }}
+                }}
+                ]
+                }}""")
+            assumed_role_id = assumed_role.id
+            assumed_role_arn = assumed_role.arn
+        else:
+            assumed_role_id = args.assumed_role_id
+            assumed_role_arn = args.assumed_role_arn
         bucket = Bucket('test',
             BucketArgs(
                 environment=args.environment,
                 project_name=args.project_name,
-                assumed_role=assumed_role.id
+                assumed_role=assumed_role_id
             ))
         codebuild = aws.codebuild.Project(f"{args.project_name}-{args.environment}",
             name=f"{args.project_name}-{args.environment}",
             description=f"codebuild project for {args.project_name} in {args.environment}",
             build_timeout=5,
-            service_role=assumed_role,
+            service_role=assumed_role_arn,
             artifacts=aws.codebuild.ProjectArtifactsArgs(
                 type="CODEPIPELINE",
             ),
             cache=aws.codebuild.ProjectCacheArgs(
                 type="S3",
-                location=bucket.id,
+                location=bucket.bucket_id,
             ),
             environment=aws.codebuild.ProjectEnvironmentArgs(
                 compute_type="BUILD_GENERAL1_SMALL",
@@ -75,7 +83,7 @@ class CodeBuildProject(ComponentResource):
                 ),
                 s3_logs=aws.codebuild.ProjectLogsConfigS3LogsArgs(
                     status="ENABLED",
-                    location=args.bucket.apply(lambda id: f"{id}/build-log"),
+                    location=bucket.bucket_id.apply(lambda id: f"{id}/build-log"),
                 ),
             ),
             source=aws.codebuild.ProjectSourceArgs(
@@ -84,7 +92,7 @@ class CodeBuildProject(ComponentResource):
             )
         )
         assumed_policy = aws.iam.RolePolicy(f"codebuildPolicy-{name}",
-            role=args.assumed_role_id,
+            role=assumed_role_id,
             policy=Output.all(codebuild.arn).apply(lambda args: f"""{{
                 "Version": "2012-10-17",
                 "Statement": [
